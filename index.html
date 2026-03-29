@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pencarian File Google Drive</title>
+    <title>Rumah Belajar Excel - Pencarian File</title>
     <!-- Menggunakan Tailwind CSS untuk styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome untuk Icon -->
@@ -12,7 +12,7 @@
     <style>
         /* Animasi loading spinner */
         .loader {
-            border-top-color: #3498db;
+            border-top-color: #16a34a; /* Warna hijau Tailwind (green-600) */
             -webkit-animation: spinner 1.5s linear infinite;
             animation: spinner 1.5s linear infinite;
         }
@@ -20,292 +20,362 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Custom scrollbar untuk sidebar agar rapi */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans text-gray-800">
 
-    <div class="max-w-5xl mx-auto p-6 mt-10">
+    <div class="max-w-7xl mx-auto p-4 md:p-6 mt-6">
         
         <!-- Header -->
-        <div class="text-center mb-10">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-                <i class="fab fa-google-drive text-blue-600 mr-2"></i> Drive File Explorer
+        <div class="text-center mb-8 flex flex-col items-center">
+            <img src="RBE jpg.jpg" alt="Logo Rumah Belajar Excel" class="h-24 md:h-32 mb-4 object-contain">
+            <h1 class="text-3xl md:text-4xl font-bold text-green-700 mb-2">
+                Rumah Belajar Excel
             </h1>
-            <p class="text-gray-600">Cari dan unduh file langsung dari folder Google Drive</p>
+            <p class="text-gray-600 font-medium text-lg">Akses Member File Excel Bebas Tanpa Batas</p>
         </div>
 
-        <!-- Panel Otorisasi -->
-        <div id="authPanel" class="bg-white rounded-lg shadow-md p-8 text-center max-w-md mx-auto">
-            <i class="fas fa-lock text-5xl text-gray-400 mb-4"></i>
-            <h2 class="text-xl font-semibold mb-4">Akses Diperlukan</h2>
-            <p class="text-sm text-gray-600 mb-6">Silakan masuk dengan akun Google Anda untuk memberikan izin membaca file dari folder ini.</p>
-            <button id="authorize_button" onclick="handleAuthClick()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition duration-300 w-full flex items-center justify-center invisible">
-                <i class="fab fa-google mr-2"></i> Otorisasi & Masuk
-            </button>
-        </div>
-
-        <!-- Panel Pencarian & Hasil (Disembunyikan sebelum login) -->
-        <div id="appPanel" class="hidden">
+        <!-- Layout Utama: Sidebar (Kiri) & Konten (Kanan) -->
+        <div class="flex flex-col md:flex-row gap-6">
             
-            <!-- Area Pencarian -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8 flex flex-col md:flex-row gap-4 items-center">
-                <div class="relative flex-grow w-full">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400"></i>
+            <!-- Sidebar Kategori -->
+            <aside class="w-full md:w-1/4 bg-white rounded-lg shadow-md p-5 h-fit md:sticky md:top-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                    <i class="fas fa-list text-green-600 mr-2"></i> Kategori
+                </h2>
+                
+                <!-- Loading indikator khusus sidebar -->
+                <div id="sidebarLoading" class="flex justify-center items-center py-4">
+                    <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6"></div>
+                </div>
+
+                <!-- Daftar Kategori -->
+                <ul id="categoryList" class="space-y-2 max-h-64 md:max-h-96 overflow-y-auto custom-scrollbar pr-2 hidden">
+                    <!-- Default Menu: Root Folder -->
+                    <li>
+                        <button onclick="openFolder(ROOT_FOLDER_ID, 'Semua File', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 border border-green-200" id="btn-root">
+                            <i class="fas fa-home mr-2 w-5 text-center"></i> Semua File
+                        </button>
+                    </li>
+                    <!-- Kategori (Folder) dari Drive akan dimuat di sini -->
+                </ul>
+            </aside>
+
+            <!-- Panel Utama (Pencarian & Tabel) -->
+            <main class="w-full md:w-3/4 flex flex-col">
+                
+                <!-- Info Folder Saat Ini & Area Pencarian -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-2">
+                        <h2 id="currentFolderName" class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-folder-open text-yellow-500 mr-2"></i> Semua File
+                        </h2>
+                        <!-- Tombol Kembali (Disembunyikan jika di root) -->
+                        <button id="backBtn" onclick="openFolder(ROOT_FOLDER_ID, 'Semua File')" class="hidden text-sm text-green-600 hover:text-green-800 font-medium transition">
+                            <i class="fas fa-arrow-left mr-1"></i> Kembali ke Awal
+                        </button>
                     </div>
-                    <input type="text" id="searchInput" placeholder="Ketikkan nama file yang dicari..." 
-                        class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                        onkeypress="handleKeyPress(event)">
+
+                    <div class="flex flex-col md:flex-row gap-3 items-center">
+                        <div class="relative flex-grow w-full">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                            <input type="text" id="searchInput" placeholder="Ketikkan nama file (misal: Laporan) di folder ini..." 
+                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition text-sm"
+                                onkeypress="handleKeyPress(event)">
+                        </div>
+                        <button onclick="triggerSearch()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0 text-sm">
+                            <i class="fas fa-search mr-1"></i> Cari
+                        </button>
+                    </div>
                 </div>
-                <button onclick="searchFiles()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0">
-                    Cari File
-                </button>
-                <button onclick="handleSignoutClick()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0" title="Keluar">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </div>
 
-            <!-- Loading Indikator -->
-            <div id="loadingIndicator" class="hidden flex justify-center items-center py-10">
-                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-            </div>
+                <!-- Pesan Error / Info -->
+                <div id="messageArea" class="hidden text-center py-4 px-6 mb-6 rounded-lg font-medium text-sm"></div>
 
-            <!-- Pesan Error / Info -->
-            <div id="messageArea" class="hidden text-center py-4 px-6 mb-6 rounded-lg font-medium"></div>
+                <!-- Tabel Hasil -->
+                <div id="tableContainer" class="bg-white rounded-lg shadow-md overflow-hidden flex-grow relative min-h-[300px]">
+                    
+                    <!-- Loading Indikator Tabel -->
+                    <div id="loadingIndicator" class="absolute inset-0 bg-white/80 z-10 hidden flex-col justify-center items-center">
+                        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+                        <p class="text-green-700 font-medium text-sm animate-pulse">Memuat data...</p>
+                    </div>
 
-            <!-- Tabel Hasil -->
-            <div id="tableContainer" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full whitespace-nowrap">
-                        <thead class="bg-gray-50 border-b border-gray-200">
-                            <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                <th class="px-6 py-4">Nama File</th>
-                                <th class="px-6 py-4 text-center">Ukuran</th>
-                                <th class="px-6 py-4 text-center">Tipe</th>
-                                <th class="px-6 py-4 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="fileList" class="divide-y divide-gray-200">
-                            <!-- Data akan dimasukkan di sini melalui JS -->
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto h-full">
+                        <table class="w-full whitespace-nowrap min-w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-0">
+                                <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    <th class="px-6 py-4">Nama File / Folder</th>
+                                    <th class="px-6 py-4 text-center">Ukuran</th>
+                                    <th class="px-6 py-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fileList" class="divide-y divide-gray-200">
+                                <!-- Data akan dimasukkan di sini melalui JS -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- Area kosong jika data tidak ada -->
+                        <div id="emptyState" class="hidden py-16 text-center">
+                            <img src="https://cdn-icons-png.flaticon.com/512/7486/7486747.png" alt="Empty" class="w-24 h-24 mx-auto opacity-50 mb-4">
+                            <h3 class="text-lg font-medium text-gray-600">Tidak ada file ditemukan</h3>
+                            <p class="text-gray-400 text-sm mt-1">Coba gunakan kata kunci lain atau pilih kategori berbeda.</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </main>
+
         </div>
-
     </div>
 
-    <!-- Script Google API -->
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-
+    <!-- Script Utama -->
     <script>
-        // === KONFIGURASI DARI PENGGUNA ===
-        const CLIENT_ID = '821451425294-p4m2q73cglnnkds7kp2hdooj2u7r38c1.apps.googleusercontent.com';
+        // === KONFIGURASI ===
         const API_KEY = 'AIzaSyCrm-_K9xGLqggF5zwklUdCVFrHgtCJX6Q';
-        const FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
+        const ROOT_FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
         
-        // Scope yang dibutuhkan untuk membaca file
-        const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
-        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        // State Aplikasi
+        let currentFolderId = ROOT_FOLDER_ID;
 
-        let tokenClient;
-        let gapiInited = false;
-        let gisInited = false;
+        // Inisialisasi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSidebarCategories();
+            loadFiles(ROOT_FOLDER_ID);
+        });
 
-        // Callback saat GAPI (Google API) dimuat
-        function gapiLoaded() {
-            gapi.load('client', initializeGapiClient);
-        }
-
-        // Inisialisasi GAPI Client
-        async function initializeGapiClient() {
+        // 1. Fungsi untuk memuat folder di root sebagai menu Sidebar (Kategori)
+        async function loadSidebarCategories() {
+            const ul = document.getElementById('categoryList');
+            const loading = document.getElementById('sidebarLoading');
+            
+            // Query hanya mencari folder di dalam Root
+            const query = `'${ROOT_FOLDER_ID}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
+            
             try {
-                await gapi.client.init({
-                    apiKey: API_KEY,
-                    discoveryDocs: [DISCOVERY_DOC],
-                });
-                gapiInited = true;
-                maybeEnableButtons();
-            } catch (err) {
-                showError('Gagal menginisialisasi Google API: ' + JSON.stringify(err));
-            }
-        }
+                const url = new URL('https://www.googleapis.com/drive/v3/files');
+                url.searchParams.append('q', query);
+                url.searchParams.append('fields', 'files(id, name)');
+                url.searchParams.append('orderBy', 'name');
+                url.searchParams.append('key', API_KEY);
 
-        // Callback saat GIS (Google Identity Services) dimuat
-        function gisLoaded() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: SCOPES,
-                callback: '', // didefinisikan nanti saat tombol diklik
-            });
-            gisInited = true;
-            maybeEnableButtons();
-        }
+                const response = await fetch(url);
+                const data = await response.json();
 
-        // Aktifkan tombol otorisasi jika kedua library sudah siap
-        function maybeEnableButtons() {
-            if (gapiInited && gisInited) {
-                document.getElementById('authorize_button').classList.remove('invisible');
-            }
-        }
-
-        // Handle klik tombol otorisasi
-        function handleAuthClick() {
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) {
-                    throw (resp);
+                if (response.ok && data.files && data.files.length > 0) {
+                    data.files.forEach(folder => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <button onclick="openFolder('${folder.id}', '${folder.name}', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-green-50 hover:text-green-600 transition-colors border border-transparent">
+                                <i class="fas fa-folder text-yellow-400 mr-2 w-5 text-center"></i> ${folder.name}
+                            </button>
+                        `;
+                        ul.appendChild(li);
+                    });
                 }
-                // Jika sukses login
-                document.getElementById('authPanel').classList.add('hidden');
-                document.getElementById('appPanel').classList.remove('hidden');
-                
-                // Langsung tampilkan semua file saat pertama kali masuk
-                await searchFiles(''); 
-            };
+            } catch (err) {
+                console.error("Gagal memuat kategori sidebar:", err);
+            } finally {
+                loading.classList.add('hidden');
+                ul.classList.remove('hidden');
+            }
+        }
 
-            if (gapi.client.getToken() === null) {
-                // Meminta token untuk pertama kali
-                tokenClient.requestAccessToken({prompt: 'consent'});
+        // 2. Fungsi untuk membuka folder (diklik dari sidebar atau dari tabel)
+        function openFolder(folderId, folderName, btnElement = null) {
+            currentFolderId = folderId;
+            
+            // Update UI Judul
+            document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${folderName}`;
+            
+            // Tampilkan / Sembunyikan tombol kembali
+            const backBtn = document.getElementById('backBtn');
+            if (folderId !== ROOT_FOLDER_ID) {
+                backBtn.classList.remove('hidden');
             } else {
-                // Skip otorisasi jika sudah ada token
-                tokenClient.requestAccessToken({prompt: ''});
+                backBtn.classList.add('hidden');
             }
+
+            // Bersihkan kolom pencarian saat pindah folder
+            document.getElementById('searchInput').value = '';
+
+            // Update styling tombol sidebar yang aktif
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-green-50 hover:text-green-600 transition-colors border border-transparent';
+            });
+            
+            // Jika tombol diklik langsung (dari sidebar), beri efek aktif
+            if (btnElement) {
+                btnElement.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 border border-green-200';
+            } else if (folderId === ROOT_FOLDER_ID) {
+                // Jika kembali ke root via tombol 'Kembali', aktifkan tombol root
+                document.getElementById('btn-root').className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 border border-green-200';
+            }
+
+            // Muat isi folder
+            loadFiles(currentFolderId);
         }
 
-        // Handle Sign Out
-        function handleSignoutClick() {
-            const token = gapi.client.getToken();
-            if (token !== null) {
-                google.accounts.oauth2.revoke(token.access_token);
-                gapi.client.setToken('');
-                
-                // Reset UI
-                document.getElementById('appPanel').classList.add('hidden');
-                document.getElementById('authPanel').classList.remove('hidden');
-                document.getElementById('tableContainer').classList.add('hidden');
-                document.getElementById('searchInput').value = '';
-            }
-        }
-
-        // Handle pencarian dengan tombol Enter
+        // 3. Handle pencarian
         function handleKeyPress(e) {
-            if (e.key === 'Enter') {
-                searchFiles();
-            }
+            if (e.key === 'Enter') triggerSearch();
         }
 
-        // Fungsi utama untuk mencari file
-        async function searchFiles(keywordOverride = null) {
-            const keyword = keywordOverride !== null ? keywordOverride : document.getElementById('searchInput').value.trim();
-            
-            // Query: Cari di dalam FOLDER_ID, jangan tampilkan file di tempat sampah
-            let query = `'${FOLDER_ID}' in parents and trashed = false`;
-            
-            // Jika ada kata kunci, tambahkan ke query
-            if (keyword) {
-                // Mencari kata kunci pada nama file
-                query += ` and name contains '${keyword}'`;
-            }
+        function triggerSearch() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            loadFiles(currentFolderId, keyword);
+        }
 
-            showLoading(true);
+        // 4. Fungsi memuat file berdasarkan Folder ID dan kata kunci pencarian
+        async function loadFiles(folderId, keyword = '') {
+            showTableLoading(true);
             hideMessage();
-            document.getElementById('tableContainer').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            
             const tbody = document.getElementById('fileList');
             tbody.innerHTML = '';
 
-            try {
-                const response = await gapi.client.drive.files.list({
-                    q: query,
-                    fields: 'files(id, name, mimeType, size, webViewLink, webContentLink)',
-                    spaces: 'drive',
-                    orderBy: 'name'
-                });
+            // Query: Ambil file di dalam folder yang sedang aktif
+            let query = `'${folderId}' in parents and trashed = false`;
+            
+            // Jika ada kata kunci, tambahkan filter nama
+            if (keyword) {
+                query += ` and name contains '${keyword}'`;
+            }
 
-                const files = response.result.files;
+            try {
+                const url = new URL('https://www.googleapis.com/drive/v3/files');
+                url.searchParams.append('q', query);
+                url.searchParams.append('fields', 'files(id, name, mimeType, size, webViewLink, webContentLink)');
+                // Urutkan: Folder di atas, lalu berdasarkan nama
+                url.searchParams.append('orderBy', 'folder,name');
+                url.searchParams.append('key', API_KEY);
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error?.message || 'Gagal mengambil data dari Google Drive');
+                }
+
+                const files = data.files;
                 
                 if (!files || files.length === 0) {
-                    showMessage('Tidak ada file yang ditemukan dengan kata kunci tersebut.', 'info');
+                    document.getElementById('emptyState').classList.remove('hidden');
                     return;
                 }
 
                 // Render tabel
                 files.forEach(file => {
                     const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-gray-50 transition duration-150';
+                    tr.className = 'hover:bg-gray-50 transition duration-150 border-b border-gray-100 last:border-0';
                     
-                    // Mendapatkan link download (webContentLink untuk download langsung, webViewLink sebagai fallback/folder)
-                    const downloadLink = file.webContentLink ? file.webContentLink : file.webViewLink;
                     const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+                    const downloadLink = file.webContentLink ? file.webContentLink : file.webViewLink;
+                    
+                    // Kolom Aksi (Tombol)
+                    let actionButton = '';
+                    if (isFolder) {
+                        // Jika Folder: Ubah onClick agar membuka folder tersebut DI DALAM aplikasi
+                        actionButton = `
+                            <button onclick="openFolder('${file.id}', '${file.name.replace(/'/g, "\\'")}')" class="inline-flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm border border-blue-200 hover:border-blue-600">
+                                <i class="fas fa-folder-open mr-2 text-xs"></i> Buka Folder
+                            </button>
+                        `;
+                    } else {
+                        // Jika File: Link untuk unduh
+                        actionButton = `
+                            <a href="${downloadLink}" target="_blank" class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                <i class="fas fa-download mr-2 text-xs"></i> Unduh File
+                            </a>
+                        `;
+                    }
                     
                     tr.innerHTML = `
                         <td class="px-6 py-4 flex items-center">
-                            <i class="${getFileIcon(file.mimeType)} text-xl mr-3 w-6 text-center"></i>
-                            <span class="font-medium text-gray-800 truncate max-w-xs md:max-w-md" title="${file.name}">${file.name}</span>
+                            <i class="${getFileIcon(file.mimeType)} text-2xl mr-4 w-8 text-center"></i>
+                            <div class="flex flex-col">
+                                <span class="font-medium text-gray-800 truncate max-w-[200px] md:max-w-md" title="${file.name}">${file.name}</span>
+                                <span class="text-xs text-gray-400 mt-0.5">${getFileExtension(file.name, isFolder)}</span>
+                            </div>
                         </td>
-                        <td class="px-6 py-4 text-center text-sm text-gray-500">
+                        <td class="px-6 py-4 text-center text-sm text-gray-500 whitespace-nowrap">
                             ${isFolder ? '-' : formatBytes(file.size)}
                         </td>
-                        <td class="px-6 py-4 text-center text-sm text-gray-500">
-                            ${getFileExtension(file.name, isFolder)}
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <a href="${downloadLink}" target="_blank" class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded shadow-sm transition duration-200">
-                                <i class="fas ${isFolder ? 'fa-external-link-alt' : 'fa-download'} mr-2 text-sm"></i>
-                                ${isFolder ? 'Buka' : 'Unduh'}
-                            </a>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">
+                            ${actionButton}
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
 
-                document.getElementById('tableContainer').classList.remove('hidden');
-
             } catch (err) {
                 console.error(err);
-                if (err.status === 404) {
-                    showMessage('Folder tidak ditemukan atau Anda tidak memiliki akses ke folder tersebut.', 'error');
-                } else if (err.status === 401) {
-                    showMessage('Sesi Anda telah habis. Silakan keluar dan otorisasi ulang.', 'error');
+                if (err.message.includes('File not found') || err.message.includes('insufficient permissions')) {
+                    showMessage('Akses Ditolak: Pastikan folder Google Drive sudah diatur ke "Siapa saja yang memiliki link" -> "Melihat".', 'error');
                 } else {
-                    showMessage('Terjadi kesalahan saat mengambil data file: ' + (err.message || 'Unknown Error'), 'error');
+                    showMessage('Terjadi kesalahan koneksi atau pencarian.', 'error');
                 }
             } finally {
-                showLoading(false);
+                showTableLoading(false);
             }
         }
 
         // --- Fungsi Bantuan (Helpers) ---
 
-        function showLoading(show) {
-            document.getElementById('loadingIndicator').style.display = show ? 'flex' : 'none';
+        function showTableLoading(show) {
+            const loader = document.getElementById('loadingIndicator');
+            if (show) {
+                loader.classList.remove('hidden');
+                loader.classList.add('flex');
+            } else {
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+            }
         }
 
         function showMessage(msg, type) {
             const msgArea = document.getElementById('messageArea');
             msgArea.innerHTML = msg;
-            msgArea.className = `text-center py-4 px-6 mb-6 rounded-lg font-medium block ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
-            msgArea.style.display = 'block';
+            msgArea.className = `text-center py-4 px-6 mb-4 rounded-lg font-medium block ${type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-600 border border-green-200'}`;
+            msgArea.classList.remove('hidden');
         }
 
         function hideMessage() {
-            document.getElementById('messageArea').style.display = 'none';
+            document.getElementById('messageArea').classList.add('hidden');
         }
 
         function formatBytes(bytes, decimals = 2) {
             if (!bytes || bytes === 0) return '0 Bytes';
             const k = 1024;
             const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
 
         function getFileExtension(filename, isFolder) {
-            if (isFolder) return 'Folder';
+            if (isFolder) return 'Folder Data';
             const parts = filename.split('.');
             if (parts.length > 1) {
-                return parts[parts.length - 1].toUpperCase();
+                return parts[parts.length - 1].toUpperCase() + ' File';
             }
             return 'File';
         }
@@ -315,13 +385,13 @@
             if (mimeType.includes('folder')) return 'fas fa-folder text-yellow-400';
             if (mimeType.includes('image')) return 'fas fa-file-image text-blue-400';
             if (mimeType.includes('pdf')) return 'fas fa-file-pdf text-red-500';
-            if (mimeType.includes('word')) return 'fas fa-file-word text-blue-600';
-            if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'fas fa-file-excel text-green-600';
+            if (mimeType.includes('word') || mimeType.includes('document')) return 'fas fa-file-word text-blue-600';
+            // Icon khusus untuk Excel karena ini Rumah Belajar Excel
+            if (mimeType.includes('excel') || mimeType.includes('spreadsheet') || mimeType.includes('csv')) return 'fas fa-file-excel text-green-600';
             if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'fas fa-file-powerpoint text-orange-500';
             if (mimeType.includes('video')) return 'fas fa-file-video text-purple-500';
-            if (mimeType.includes('audio')) return 'fas fa-file-audio text-pink-500';
             if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('compressed')) return 'fas fa-file-archive text-gray-600';
-            return 'fas fa-file text-gray-400';
+            return 'fas fa-file-alt text-gray-500';
         }
 
     </script>
