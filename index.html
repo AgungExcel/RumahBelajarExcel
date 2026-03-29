@@ -84,7 +84,6 @@
                 
                 <!-- Auth Container -->
                 <div id="authNavContainer" class="flex items-center">
-                    <!-- Tombol Login (Akan diganti dengan info user jika sudah login) -->
                     <button onclick="openAuthModal()" id="btnLoginNav" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                         <i class="fas fa-sign-in-alt mr-2"></i> Login Member
                     </button>
@@ -102,7 +101,7 @@
 
     <!-- Modal Login / Daftar -->
     <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div class="flex border-b">
                 <button onclick="switchAuthTab('login')" id="tabLoginBtn" class="w-1/2 py-4 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light">Login</button>
                 <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent">Daftar Member</button>
@@ -111,29 +110,64 @@
             <div class="p-6">
                 <!-- Form Login -->
                 <div id="loginForm">
-                    <h3 class="text-lg font-bold mb-4 text-center">Masuk ke Member RBE</h3>
-                    <input type="text" id="loginUsername" placeholder="Username (Nama)" class="w-full mb-4 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main">
-                    <input type="password" id="loginPassword" placeholder="Password (4 Angka)" class="w-full mb-6 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main" maxlength="4">
-                    <button onclick="processLogin()" class="w-full bg-brand-main hover:bg-brand-hover text-white font-bold py-2 px-4 rounded-lg transition duration-200">Login</button>
+                    <h3 class="text-xl font-extrabold mb-4 text-center text-gray-800">Masuk ke Member RBE</h3>
+                    
+                    <div class="relative mb-4">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" id="loginUsername" placeholder="Username" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white">
+                    </div>
+                    
+                    <div class="relative mb-4">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-400"></i>
+                        </div>
+                        <input type="password" id="loginPassword" placeholder="Password (4 Angka Terakhir No HP)" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white" maxlength="4">
+                    </div>
+                    
+                    <div class="flex items-center mb-6">
+                        <input type="checkbox" id="rememberMe" class="w-4 h-4 text-brand-main bg-gray-100 border-gray-300 rounded focus:ring-brand-main focus:ring-2 cursor-pointer" checked>
+                        <label for="rememberMe" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">Simpan Info Login (Otomatis Masuk)</label>
+                    </div>
+                    
+                    <button onclick="processLogin()" class="w-full bg-brand-main hover:bg-brand-hover text-white font-bold py-2.5 px-4 rounded-lg transition duration-200 shadow-md">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login Sekarang
+                    </button>
                 </div>
 
                 <!-- Form Register -->
                 <div id="registerForm" class="hidden">
-                    <h3 class="text-lg font-bold mb-2 text-center">Daftar Member Baru</h3>
-                    <p class="text-xs text-center text-gray-500 mb-4">Pendaftaran harus disetujui Admin sebelum bisa login.</p>
+                    <h3 class="text-xl font-extrabold mb-2 text-center text-gray-800">Daftar Member Baru</h3>
+                    <p class="text-xs text-center text-gray-500 mb-4 bg-gray-50 p-2 rounded-md">Pendaftaran harus disetujui Admin sebelum bisa digunakan.</p>
+                    
                     <div class="mb-4">
-                        <input type="text" id="regUsername" placeholder="Username (Hanya Huruf, Tanpa Angka)" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main">
-                        <p class="text-xs text-red-500 mt-1 hidden" id="errRegUser">Username hanya boleh berisi huruf dan spasi.</p>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-id-badge text-gray-400"></i>
+                            </div>
+                            <input type="text" id="regUsername" placeholder="Username (Tanpa Angka)" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white">
+                        </div>
+                        <p class="text-xs text-red-500 mt-1 hidden font-medium" id="errRegUser">Username hanya boleh berisi huruf dan spasi, serta tidak boleh ganda.</p>
                     </div>
+                    
                     <div class="mb-6">
-                        <input type="password" id="regPassword" placeholder="Password (Wajib 4 Digit Angka)" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main" maxlength="4">
-                        <p class="text-xs text-red-500 mt-1 hidden" id="errRegPwd">Password wajib berisi 4 digit angka.</p>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-key text-gray-400"></i>
+                            </div>
+                            <input type="password" id="regPassword" placeholder="Password (4 Angka Terakhir No HP)" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white" maxlength="4">
+                        </div>
+                        <p class="text-xs text-red-500 mt-1 hidden font-medium" id="errRegPwd">Password wajib berisi 4 digit angka terakhir No HP Anda.</p>
                     </div>
-                    <button onclick="processRegister()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Daftar Sekarang</button>
+                    
+                    <button onclick="processRegister()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 px-4 rounded-lg transition duration-200 shadow-md">
+                        <i class="fas fa-user-plus mr-2"></i> Daftar Sekarang
+                    </button>
                 </div>
             </div>
             <div class="bg-gray-50 px-4 py-3 border-t text-right">
-                <button onclick="closeAuthModal()" class="text-gray-600 hover:text-gray-800 font-medium text-sm">Tutup</button>
+                <button onclick="closeAuthModal()" class="text-gray-600 hover:text-gray-800 font-medium text-sm transition">Batal / Tutup</button>
             </div>
         </div>
     </div>
@@ -216,7 +250,7 @@
                             </div>
                         </div>
 
-                        <button onclick="triggerSearch()" class="bg-brand-main hover:bg-brand-hover text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full md:w-3/12 flex-shrink-0 text-sm">
+                        <button onclick="triggerSearch()" class="bg-brand-main hover:bg-brand-hover text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full md:w-3/12 flex-shrink-0 text-sm shadow-sm">
                             <i class="fas fa-search mr-1"></i> Cari
                         </button>
                     </div>
@@ -367,11 +401,11 @@
         let isSupabaseActive = true;
 
         // ==========================================
-        // SISTEM OTENTIKASI MEMBER
+        // SISTEM OTENTIKASI MEMBER (Remember Me)
         // ==========================================
-        let loggedInMember = JSON.parse(sessionStorage.getItem('rbe_logged_member')) || null;
+        // Mengecek Local Storage (Remember Me) terlebih dahulu, jika kosong baru cek Session Storage
+        let loggedInMember = JSON.parse(localStorage.getItem('rbe_logged_member')) || JSON.parse(sessionStorage.getItem('rbe_logged_member')) || null;
         
-        // Simpan anon id untuk user publik yang belum login agar log unduhan tetap tercatat sebagai "Tamu"
         let anonGuestId = sessionStorage.getItem('rbe_guest_user');
         if (!anonGuestId) {
             anonGuestId = 'Tamu-' + Math.random().toString(36).substr(2, 5).toUpperCase();
@@ -393,13 +427,12 @@
             } else {
                 container.innerHTML = `
                     <button onclick="openAuthModal()" id="btnLoginNav" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
-                        <i class="fas fa-sign-in-alt mr-2"></i> Login / Daftar Member
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login Member
                     </button>
                 `;
             }
         }
         
-        // Panggil saat load pertama kali
         document.addEventListener('DOMContentLoaded', () => {
             updateAuthUI();
         });
@@ -421,12 +454,12 @@
 
             if (tab === 'login') {
                 btnLog.className = "w-1/2 py-4 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light";
-                btnReg.className = "w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent";
+                btnReg.className = "w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent transition";
                 formLog.classList.remove('hidden');
                 formReg.classList.add('hidden');
             } else {
                 btnReg.className = "w-1/2 py-4 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light";
-                btnLog.className = "w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent";
+                btnLog.className = "w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent transition";
                 formReg.classList.remove('hidden');
                 formLog.classList.add('hidden');
             }
@@ -444,25 +477,28 @@
 
             // Validasi: Username hanya huruf & spasi (tanpa angka)
             if (!/^[A-Za-z\s]+$/.test(user) || user.length < 3) {
+                errUser.innerText = "Username hanya boleh berisi huruf dan spasi (min. 3 huruf).";
                 errUser.classList.remove('hidden');
                 return;
             }
             // Validasi: Password wajib persis 4 angka
             if (!/^\d{4}$/.test(pass)) {
+                errPwd.innerText = "Password wajib berisi 4 digit angka terakhir No HP Anda.";
                 errPwd.classList.remove('hidden');
                 return;
             }
 
             try {
-                // Cek apakah username sudah ada
+                // Cek apakah username sudah ada (Anti Ganda) menggunakan maybeSingle()
                 const { data: existingUser } = await supabaseClient
                     .from('users_rbe')
                     .select('username')
                     .eq('username', user.toLowerCase())
-                    .single();
+                    .maybeSingle();
 
                 if (existingUser) {
-                    alert("Username sudah terdaftar! Silakan pilih nama lain.");
+                    errUser.innerText = "Username ini sudah dipakai. Tidak boleh ganda dengan yang lain.";
+                    errUser.classList.remove('hidden');
                     return;
                 }
 
@@ -480,7 +516,7 @@
 
             } catch (err) {
                 console.error("Error Register:", err);
-                alert("Terjadi kesalahan sistem saat mendaftar. (Pastikan tabel 'users_rbe' sudah dibuat di Supabase).");
+                alert("Terjadi kesalahan sistem saat mendaftar.");
             }
         }
 
@@ -496,14 +532,13 @@
                     .select('*')
                     .eq('username', user)
                     .eq('password', pass)
-                    .single();
+                    .maybeSingle();
 
                 if (error || !userData) {
                     alert("Login Gagal! Username atau password salah.");
                     return;
                 }
 
-                // Cek Status Persetujuan Admin
                 if (userData.status === 'pending') {
                     alert("Akses Ditolak: Akun Anda masih menunggu persetujuan Admin.");
                     return;
@@ -512,10 +547,17 @@
                     return;
                 }
 
-                // Jika status approved (disetujui)
-                alert(`Selamat datang kembali, ${userData.username}!`);
+                // Jika status approved
+                alert(`Selamat datang kembali, ${userData.username.toUpperCase()}!`);
                 loggedInMember = userData;
-                sessionStorage.setItem('rbe_logged_member', JSON.stringify(userData));
+                
+                // Cek apakah user ingin menyimpan info login (Remember Me)
+                const rememberMe = document.getElementById('rememberMe').checked;
+                if (rememberMe) {
+                    localStorage.setItem('rbe_logged_member', JSON.stringify(userData));
+                } else {
+                    sessionStorage.setItem('rbe_logged_member', JSON.stringify(userData));
+                }
                 
                 updateAuthUI();
                 closeAuthModal();
@@ -530,9 +572,10 @@
         function processLogout() {
             if(confirm("Apakah Anda yakin ingin keluar?")) {
                 loggedInMember = null;
+                localStorage.removeItem('rbe_logged_member');
                 sessionStorage.removeItem('rbe_logged_member');
                 updateAuthUI();
-                triggerSearch(); // Refresh list agar tombol terkunci lagi
+                triggerSearch(); // Refresh list agar file terkunci kembali
             }
         }
 
@@ -555,7 +598,7 @@
             if (navigator.share) {
                 navigator.share({
                     title: fileName,
-                    text: `Unduh / Buka file / folder ini: ${fileName}`,
+                    text: `Buka / Unduh file ini: ${fileName}`,
                     url: link,
                 }).catch(console.error);
             } else {
@@ -582,7 +625,6 @@
                     navBtnAdmin.classList.add('hidden');
                     navBtnHome.classList.remove('hidden');
                     
-                    // Default open Member tab
                     switchAdminTab('members');
                 } else {
                     alert("Password yang Anda masukkan SALAH!");
@@ -603,13 +645,13 @@
 
             if (tabName === 'members') {
                 btnMembers.className = "px-6 py-3 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light flex items-center";
-                btnLogs.className = "px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent flex items-center";
+                btnLogs.className = "px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent flex items-center transition";
                 secMembers.classList.remove('hidden');
                 secLogs.classList.add('hidden');
                 loadAdminMembers();
             } else {
                 btnLogs.className = "px-6 py-3 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light flex items-center";
-                btnMembers.className = "px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent flex items-center";
+                btnMembers.className = "px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent flex items-center transition";
                 secLogs.classList.remove('hidden');
                 secMembers.classList.add('hidden');
                 loadAdminData();
@@ -685,7 +727,7 @@
                 }
             } catch(e) {
                 console.error("Error Load Member:", e);
-                alert("Gagal memuat data member. Pastikan Anda telah membuat tabel users_rbe.");
+                alert("Gagal memuat data member.");
             } finally {
                 loading.classList.add('hidden');
                 loading.classList.remove('flex');
@@ -711,9 +753,7 @@
 
         // --- TRACKING LOG UNDUHAN ---
         async function trackDownload(fileName, fileSize) {
-            // Gunakan username jika sudah login, jika belum gunakan ID Tamu
             const identifier = loggedInMember ? loggedInMember.username : anonGuestId;
-            
             try {
                 await supabaseClient.from('log_unduhan').insert([
                     { id_pengguna: identifier, nama_file: fileName, ukuran_file: fileSize }
@@ -992,20 +1032,21 @@
                     const safeFileName = file.name.replace(/'/g, "\\'"); 
                     
                     let actionButton = '';
-                    if (isFolder) {
-                        actionButton = `
-                            <div class="flex items-center justify-center gap-2">
-                                <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Folder">
-                                    <i class="fas fa-share-nodes"></i>
-                                </button>
-                                <button onclick="openFolder('${file.id}', '${safeFileName}')" class="inline-flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
-                                    <i class="fas fa-folder-open mr-2 text-xs"></i> Buka Folder
-                                </button>
-                            </div>
-                        `;
-                    } else {
-                        // LOGIKA TOMBOL UNDUH BERDASARKAN STATUS LOGIN & APPROVAL
-                        if (loggedInMember && loggedInMember.status === 'approved') {
+                    
+                    // STATUS KETIKA SUDAH LOGIN & DISETUJUI ADMIN
+                    if (loggedInMember && loggedInMember.status === 'approved') {
+                        if (isFolder) {
+                            actionButton = `
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Folder">
+                                        <i class="fas fa-share-nodes"></i>
+                                    </button>
+                                    <a href="${downloadLink}" target="_blank" class="inline-flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                        <i class="fas fa-download mr-2 text-xs"></i> Unduh Folder
+                                    </a>
+                                </div>
+                            `;
+                        } else {
                             actionButton = `
                                 <div class="flex items-center justify-center gap-2">
                                     <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
@@ -1016,18 +1057,21 @@
                                     </a>
                                 </div>
                             `;
-                        } else {
-                            actionButton = `
-                                <div class="flex items-center justify-center gap-2">
-                                    <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
-                                        <i class="fas fa-share-nodes"></i>
-                                    </button>
-                                    <button onclick="openAuthModal()" class="inline-flex items-center justify-center bg-gray-400 hover:bg-gray-500 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm cursor-not-allowed" title="Login untuk mengunduh">
-                                        <i class="fas fa-lock mr-2 text-xs"></i> Terkunci
-                                    </button>
-                                </div>
-                            `;
                         }
+                    } 
+                    // STATUS KETIKA BELUM LOGIN / BELUM DISETUJUI
+                    else {
+                        // Baik Folder maupun File digembok (Terkunci)
+                        actionButton = `
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Tautan">
+                                    <i class="fas fa-share-nodes"></i>
+                                </button>
+                                <button onclick="openAuthModal()" class="inline-flex items-center justify-center bg-gray-400 hover:bg-gray-500 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm cursor-not-allowed" title="Login untuk mengunduh">
+                                    <i class="fas fa-lock mr-2 text-xs"></i> Terkunci
+                                </button>
+                            </div>
+                        `;
                     }
                     
                     tr.innerHTML = `
