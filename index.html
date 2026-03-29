@@ -133,6 +133,39 @@
         </div>
     </div>
 
+    <!-- Modal Ganti Password Admin Elegan -->
+    <div id="changePwdModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all">
+            <div class="bg-blue-600 p-6 text-center">
+                <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-blue-400 shadow-inner">
+                    <i class="fas fa-key text-3xl text-white"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-white tracking-wide">Ganti Password</h3>
+                <p class="text-blue-100 text-sm mt-1">Perbarui kata sandi admin Anda</p>
+            </div>
+            <div class="p-6 bg-gray-50">
+                <div class="relative mb-4">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-unlock text-gray-400"></i>
+                    </div>
+                    <input type="password" id="oldPwdInput" placeholder="Password Lama" class="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-center tracking-widest font-bold shadow-sm">
+                </div>
+                <div class="relative mb-6">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-lock text-gray-400"></i>
+                    </div>
+                    <input type="password" id="newPwdInput" placeholder="Password Baru" class="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white text-center tracking-widest font-bold shadow-sm" onkeypress="if(event.key === 'Enter') submitChangePassword()">
+                </div>
+                <button onclick="submitChangePassword()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center">
+                    <i class="fas fa-save mr-2"></i> Simpan Password
+                </button>
+                <button onclick="closeChangePwdModal()" class="w-full mt-3 bg-white hover:bg-gray-100 text-gray-600 font-bold py-2.5 px-4 rounded-xl border border-gray-200 transition duration-200 shadow-sm">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Login / Daftar Member -->
     <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -362,7 +395,7 @@
                     <p class="text-sm text-gray-500 mt-1">Kelola pendaftaran member dan riwayat unduhan.</p>
                 </div>
                 <div class="mt-4 md:mt-0 flex gap-2">
-                    <button onclick="changeAdminPassword()" class="text-xs text-blue-600 hover:text-white border border-blue-600 hover:bg-blue-600 py-2 px-3 rounded transition flex items-center shadow-sm">
+                    <button onclick="openChangePwdModal()" class="text-xs text-blue-600 hover:text-white border border-blue-600 hover:bg-blue-600 py-2 px-3 rounded transition flex items-center shadow-sm">
                         <i class="fas fa-key mr-1"></i> Ganti Password
                     </button>
                 </div>
@@ -857,21 +890,34 @@
             }
         }
 
-        function changeAdminPassword() {
+        function openChangePwdModal() {
+            document.getElementById('oldPwdInput').value = '';
+            document.getElementById('newPwdInput').value = '';
+            document.getElementById('changePwdModal').classList.remove('hidden');
+        }
+
+        function closeChangePwdModal() {
+            document.getElementById('changePwdModal').classList.add('hidden');
+        }
+
+        function submitChangePassword() {
             const savedPwd = localStorage.getItem('rbe_admin_pwd') || 'AGUNG';
-            const oldPwd = prompt("Masukkan Password Admin LAMA:");
+            const oldPwd = document.getElementById('oldPwdInput').value;
+            const newPwd = document.getElementById('newPwdInput').value;
             
-            if (oldPwd === null) return;
             if (oldPwd === savedPwd) {
-                const newPwd = prompt("Masukkan Password Admin BARU:");
                 if (newPwd && newPwd.trim() !== '') {
                     localStorage.setItem('rbe_admin_pwd', newPwd);
                     alert("Password berhasil diubah!");
+                    closeChangePwdModal();
                 } else {
                     alert("Password baru tidak boleh kosong.");
+                    document.getElementById('newPwdInput').focus();
                 }
             } else {
                 alert("Password LAMA yang Anda masukkan salah!");
+                document.getElementById('oldPwdInput').value = '';
+                document.getElementById('oldPwdInput').focus();
             }
         }
 
