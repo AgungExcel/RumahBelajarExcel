@@ -78,8 +78,15 @@
             </div>
             
             <div class="flex items-center gap-2 md:gap-4 flex-wrap justify-end">
-                <button onclick="shareWeb()" class="text-gray-600 hover:text-brand-main font-medium py-1.5 px-2 md:px-3 rounded-md transition duration-200 text-sm flex items-center border border-transparent hover:bg-brand-light">
-                    <i class="fas fa-share-nodes mr-1 md:mr-2"></i> <span class="hidden md:inline">Bagikan Web</span>
+                
+                <!-- Indikator User Online -->
+                <div class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 shadow-sm" title="Pengguna Sedang Aktif">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span id="onlineCount" class="text-xs font-bold text-green-700">1 Online</span>
+                </div>
+
+                <button onclick="shareWeb()" class="text-gray-600 hover:text-brand-main font-medium py-1.5 px-2 md:px-3 rounded-md transition duration-200 text-sm flex items-center border border-transparent hover:bg-brand-light hidden sm:flex">
+                    <i class="fas fa-share-nodes mr-1 md:mr-2"></i> <span class="hidden md:inline">Bagikan</span>
                 </button>
                 
                 <!-- Auth Container -->
@@ -104,7 +111,7 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div class="flex border-b">
                 <button onclick="switchAuthTab('login')" id="tabLoginBtn" class="w-1/2 py-4 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light">Login</button>
-                <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent">Daftar Member</button>
+                <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent transition">Daftar Member</button>
             </div>
             
             <div class="p-6">
@@ -364,7 +371,11 @@
             <!-- SEKSI 2: LOG UNDUHAN -->
             <div id="adminLogsSection" class="hidden">
                 <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
-                    <h3 class="font-bold text-gray-700">Riwayat File Diunduh</h3>
+                    <h3 class="font-bold text-gray-700 flex items-center">
+                        Riwayat File Diunduh
+                        <!-- ID totalDownloads DIKEMBALIKAN KE SINI -->
+                        <span class="ml-3 bg-brand-light text-brand-hover text-xs font-bold px-2.5 py-1 rounded-full border border-brand-border">Total: <span id="totalDownloads">0</span></span>
+                    </h3>
                     <div class="flex flex-wrap gap-2 items-center">
                         <button onclick="loadAdminData()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded transition flex items-center">
                             <i class="fas fa-sync-alt mr-1"></i> Refresh Data
@@ -415,7 +426,7 @@
         let isSupabaseActive = true;
 
         // ==========================================
-        // SISTEM OTENTIKASI MEMBER
+        // SISTEM OTENTIKASI MEMBER (Remember Me)
         // ==========================================
         let loggedInMember = JSON.parse(localStorage.getItem('rbe_logged_member')) || JSON.parse(sessionStorage.getItem('rbe_logged_member')) || null;
         
@@ -425,6 +436,35 @@
             sessionStorage.setItem('rbe_guest_user', anonGuestId);
         }
 
+        // ==========================================
+        // INDIKATOR PENGGUNA ONLINE (PRESENCE)
+        // ==========================================
+        const presenceChannel = supabaseClient.channel('online-users');
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const newState = presenceChannel.presenceState();
+                let onlineCount = Object.keys(newState).length; // Menghitung perangkat unik yang konek
+                const badge = document.getElementById('onlineCount');
+                if(badge) badge.innerText = onlineCount + ' Online';
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    updatePresence();
+                }
+            });
+
+        async function updatePresence() {
+            if (presenceChannel.state === 'joined') {
+                const userName = loggedInMember ? loggedInMember.username : anonGuestId;
+                await presenceChannel.track({
+                    user: userName,
+                    online_at: new Date().toISOString(),
+                });
+            }
+        }
+
+        // --- UI Modal & Navigasi ---
         function updateAuthUI() {
             const container = document.getElementById('authNavContainer');
             if (loggedInMember) {
@@ -498,7 +538,7 @@
             }
 
             try {
-                // Gunakan mode select array biasa karena lebih stabil dan tidak men-trigger error query strict
+                // Gunakan mode select array biasa karena lebih stabil
                 const { data: existingUsers, error: checkErr } = await supabaseClient
                     .from('users_rbe')
                     .select('username')
@@ -536,20 +576,18 @@
             if (!user || !pass) return alert("Harap isi username dan password.");
 
             try {
-                // Perbaikan Utama: Memakai select() mode array daripada maybeSingle() untuk menghindari bug database yang strict
+                // Memakai select() mode array untuk menghindari bug database strict
                 const { data: users, error } = await supabaseClient
                     .from('users_rbe')
                     .select('*')
                     .eq('username', user)
                     .eq('password', pass);
 
-                // Notifikasi detail jika error server
                 if (error) {
                     alert("Error Database Server: " + error.message);
                     return;
                 }
 
-                // Jika data kosong / tidak ditemukan kecocokan
                 if (!users || users.length === 0) {
                     alert(`Login Gagal! \n\nPastikan data Anda sudah benar:\nUsername: ${user}\nPassword: ${pass}`);
                     return;
@@ -575,12 +613,13 @@
                     sessionStorage.setItem('rbe_logged_member', JSON.stringify(userData));
                 }
                 
-                // Perbaikan: Bersihkan form input secara paksa agar saat logout data form benar-benar bersih
+                // Bersihkan form input
                 document.getElementById('loginUsername').value = '';
                 document.getElementById('loginPassword').value = '';
                 
                 updateAuthUI();
                 closeAuthModal();
+                updatePresence(); // Sinkronkan ulang kehadiran online (nama berganti menjadi username asli)
                 triggerSearch(); 
 
             } catch(e) {
@@ -595,11 +634,11 @@
                 localStorage.removeItem('rbe_logged_member');
                 sessionStorage.removeItem('rbe_logged_member');
                 
-                // Perbaikan ekstra: Membersihkan input form saat proses logout juga
                 document.getElementById('loginUsername').value = '';
                 document.getElementById('loginPassword').value = '';
                 
                 updateAuthUI();
+                updatePresence(); // Sinkronkan nama online menjadi Tamu kembali
                 triggerSearch(); 
             }
         }
@@ -778,6 +817,7 @@
 
         // --- TRACKING LOG UNDUHAN ---
         async function trackDownload(fileName, fileSize) {
+            // Identifikasi: Gunakan nama user jika login, atau ID Tamu jika belum
             const identifier = loggedInMember ? loggedInMember.username : anonGuestId;
             try {
                 await supabaseClient.from('log_unduhan').insert([
@@ -813,7 +853,8 @@
                     }));
                 }
 
-                document.getElementById('totalDownloads').innerText = history.length;
+                const totalBadge = document.getElementById('totalDownloads');
+                if(totalBadge) totalBadge.innerText = history.length;
                 window.currentLogData = history;
 
                 if (history.length === 0) {
@@ -849,7 +890,7 @@
                 }
             } catch(e) { 
                 console.error("Error Load Supabase (Log Unduhan):", e); 
-                alert("Peringatan: Gagal memuat data log.\nError detail: " + e.message);
+                alert("Peringatan: Gagal memuat data log. \nError detail: " + e.message);
             }
             finally {
                 loading.classList.add('hidden');
