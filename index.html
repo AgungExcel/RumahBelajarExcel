@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rumah Belajar Excel - Pencarian File</title>
     
+    <!-- Meta Tags untuk Thumbnail Share (WhatsApp, Facebook, Twitter, dll) -->
+    <meta property="og:title" content="Rumah Belajar Excel - Download File">
+    <meta property="og:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
+    <meta property="og:image" content="rbe_depan.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Rumah Belajar Excel - Download File">
+    <meta name="twitter:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
+    <meta name="twitter:image" content="rbe_depan.png">
+    
     <!-- Favicon (menggunakan ?v=2 untuk memaksa browser merefresh cache gambar lama) -->
     <link rel="icon" type="image/png" href="rbe.png?v=2">
     
@@ -197,7 +207,7 @@
                         <div id="emptyState" class="hidden py-16 text-center">
                             <img src="https://cdn-icons-png.flaticon.com/512/7486/7486747.png" alt="Empty" class="w-24 h-24 mx-auto opacity-50 mb-4">
                             <h3 class="text-lg font-medium text-gray-600">Tidak ada file ditemukan</h3>
-                            <p class="text-gray-400 text-sm mt-1">Coba gunakan kata kunci lain atau pilih kategori berbeda.</p>
+                            <p class="text-gray-400 text-sm mt-1">Coba gunakan kata kunci lain atau pilih format/kategori berbeda.</p>
                         </div>
                     </div>
                 </div>
@@ -218,18 +228,6 @@
                 <div class="mt-4 md:mt-0 bg-brand-light border border-brand-border text-brand-hover px-4 py-2 rounded-lg text-center shadow-sm">
                     <span class="block text-xs font-bold uppercase tracking-wider">Total Unduhan</span>
                     <span id="totalDownloads" class="text-2xl font-black">0</span>
-                </div>
-            </div>
-
-            <!-- Pesan Peringatan Supabase -->
-            <div id="supabaseAlert" class="hidden bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded-r-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0"><i class="fas fa-exclamation-triangle text-yellow-500"></i></div>
-                    <div class="ml-3">
-                        <p class="text-sm text-yellow-700">
-                            <strong>Perhatian:</strong> Kunci Anon (Anon Key) Supabase belum diisi di dalam kode HTML. Untuk sementara log unduhan hanya disimpan di memori perangkat ini (Local Storage).
-                        </p>
-                    </div>
                 </div>
             </div>
 
@@ -319,12 +317,12 @@
             if (navigator.share) {
                 navigator.share({
                     title: fileName,
-                    text: `Unduh / Buka file Excel ini: ${fileName}`,
+                    text: `Unduh / Buka file / folder ini: ${fileName}`,
                     url: link,
                 }).catch(console.error);
             } else {
                 navigator.clipboard.writeText(link);
-                alert(`Link file "${fileName}" berhasil disalin ke clipboard!`);
+                alert(`Link untuk "${fileName}" berhasil disalin ke clipboard!`);
             }
         }
 
@@ -334,8 +332,6 @@
             const adminView = document.getElementById('adminView');
             const navBtnAdmin = document.getElementById('navBtnAdmin');
             const navBtnHome = document.getElementById('navBtnHome');
-
-            if (!isSupabaseActive) document.getElementById('supabaseAlert').classList.remove('hidden');
 
             if (view === 'admin') {
                 const savedPwd = localStorage.getItem('rbe_admin_pwd') || 'AGUNG';
@@ -559,6 +555,7 @@
             else backBtn.classList.add('hidden');
 
             document.getElementById('searchInput').value = '';
+            document.getElementById('fileFormatFilter').value = '';
 
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent';
@@ -580,7 +577,7 @@
             loadFiles(currentFolderId, keyword);
         }
 
-        // 4. Memuat File & Pencarian Lanjutan yang Sudah Diperbaiki (Chunking Process)
+        // 4. Memuat File & Pencarian yang Diperbaiki Bebas Error
         async function loadFiles(folderId, keyword = '') {
             showTableLoading(true);
             hideMessage();
@@ -590,37 +587,24 @@
 
             const safeKeyword = keyword.replace(/'/g, "\\'"); 
             const format = document.getElementById('fileFormatFilter').value;
-            let mimeQuery = '';
-            
-            // Logika filter format file
-            if (format === 'excel') mimeQuery = ` and (mimeType contains 'spreadsheet' or mimeType contains 'excel' or mimeType contains 'csv')`;
-            else if (format === 'word') mimeQuery = ` and (mimeType contains 'wordprocessingml' or mimeType contains 'document')`;
-            else if (format === 'pdf') mimeQuery = ` and mimeType contains 'pdf'`;
-            else if (format === 'powerpoint') mimeQuery = ` and (mimeType contains 'presentation' or mimeType contains 'powerpoint')`;
-            else if (format === 'image') mimeQuery = ` and mimeType contains 'image'`;
-            else if (format === 'video') mimeQuery = ` and mimeType contains 'video'`;
-            else if (format === 'archive') mimeQuery = ` and (mimeType contains 'zip' or mimeType contains 'rar' or mimeType contains 'tar' or mimeType contains '7z')`;
+            let files = [];
 
             try {
-                let files = [];
-
                 // PERBAIKAN PENCARIAN GLOBAL
-                // Jika mencari di "Semua File" (Root) dan pengguna mengetik sesuatu atau memilih filter
                 if (folderId === ROOT_FOLDER_ID && (safeKeyword !== '' || format !== '')) {
                     
                     let parentQueries = [`'${ROOT_FOLDER_ID}' in parents`];
                     subFolderIds.forEach(id => parentQueries.push(`'${id}' in parents`));
                     
-                    // Pecah menjadi query kecil-kecil (maks 8 folder per request) agar tidak ERROR 400
-                    const chunkSize = 8;
-                    const fetchPromises = [];
-
+                    // Kita pecah menjadi ukuran yang sangat kecil (batch = 5 folder per request) 
+                    // agar tidak melanggar batasan URL dari Google API (mengatasi Error 400).
+                    const chunkSize = 5; 
+                    
                     for (let i = 0; i < parentQueries.length; i += chunkSize) {
                         const chunk = parentQueries.slice(i, i + chunkSize);
                         let query = `(${chunk.join(' or ')}) and trashed = false`;
                         
                         if (safeKeyword) query += ` and name contains '${safeKeyword}'`;
-                        if (mimeQuery) query += mimeQuery;
 
                         const url = new URL('https://www.googleapis.com/drive/v3/files');
                         url.searchParams.append('q', query);
@@ -628,23 +612,17 @@
                         url.searchParams.append('orderBy', 'folder,name');
                         url.searchParams.append('key', API_KEY);
                         
-                        fetchPromises.push(fetch(url).then(res => res.json()));
+                        try {
+                            const response = await fetch(url);
+                            const data = await response.json();
+                            if (data.error) throw new Error(data.error.message);
+                            if (data.files) files = files.concat(data.files);
+                        } catch(e) {
+                            console.error("Error pada sebagian pencarian:", e);
+                        }
                     }
 
-                    // Gabungkan hasil dari semua API yang dipecah tadi
-                    const results = await Promise.all(fetchPromises);
-                    
-                    results.forEach(data => {
-                        if (data.error) {
-                            console.error("API Chunk Error:", data.error);
-                            throw new Error(data.error.message);
-                        }
-                        if (data.files) {
-                            files = files.concat(data.files);
-                        }
-                    });
-
-                    // Sort ulang hasilnya
+                    // Urutkan ulang hasilnya (Folder di atas, file berabjad)
                     files.sort((a, b) => {
                         const aFolder = a.mimeType === 'application/vnd.google-apps.folder';
                         const bFolder = b.mimeType === 'application/vnd.google-apps.folder';
@@ -654,10 +632,9 @@
                     });
 
                 } else {
-                    // Pencarian Biasa / Klik Folder Biasa
+                    // Pencarian Biasa (di dalam 1 folder)
                     let query = `'${folderId}' in parents and trashed = false`;
                     if (safeKeyword) query += ` and name contains '${safeKeyword}'`;
-                    if (mimeQuery) query += mimeQuery;
 
                     const url = new URL('https://www.googleapis.com/drive/v3/files');
                     url.searchParams.append('q', query);
@@ -670,6 +647,21 @@
 
                     if (!response.ok) throw new Error(data.error?.message || 'Gagal mengambil data');
                     files = data.files || [];
+                }
+
+                // FILTER JAVASCRIPT: Menyaring berdasarkan format file dengan aman
+                if (format !== '') {
+                    files = files.filter(file => {
+                        const mime = file.mimeType.toLowerCase();
+                        if (format === 'excel') return mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv');
+                        if (format === 'word') return mime.includes('wordprocessingml') || mime.includes('document');
+                        if (format === 'pdf') return mime.includes('pdf');
+                        if (format === 'powerpoint') return mime.includes('presentation') || mime.includes('powerpoint');
+                        if (format === 'image') return mime.includes('image');
+                        if (format === 'video') return mime.includes('video');
+                        if (format === 'archive') return mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z');
+                        return true;
+                    });
                 }
 
                 // --- PROSES TAMPILKAN HASIL KE TABEL ---
@@ -688,7 +680,6 @@
                     
                     let actionButton = '';
                     if (isFolder) {
-                        // PERMINTAAN BARU: Tombol aksi folder menjadi Unduh Folder dan Bagikan Folder
                         actionButton = `
                             <div class="flex items-center justify-center gap-2">
                                 <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Folder">
@@ -700,7 +691,6 @@
                             </div>
                         `;
                     } else {
-                        // Aksi untuk File biasa
                         actionButton = `
                             <div class="flex items-center justify-center gap-2">
                                 <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
@@ -717,7 +707,6 @@
                         <td class="px-6 py-4 flex items-center">
                             <i class="${getFileIcon(file.mimeType)} text-2xl mr-4 w-8 text-center"></i>
                             <div class="flex flex-col">
-                                <!-- Nama Folder Tetap Bisa Diklik Untuk Membuka Isi Folder Tersebut -->
                                 <span class="font-medium text-gray-800 truncate max-w-[200px] md:max-w-md ${isFolder ? 'cursor-pointer hover:text-brand-main hover:underline' : ''}" title="${file.name}" ${isFolder ? `onclick="openFolder('${file.id}', '${safeFileName}')"` : ''}>
                                     ${file.name}
                                 </span>
