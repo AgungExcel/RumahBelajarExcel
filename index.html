@@ -72,7 +72,7 @@
     <!-- Top Navigation Bar -->
     <nav class="bg-white shadow-sm sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition" onclick="openFolder(ROOT_FOLDER_ID, 'Semua File'); toggleView('main');">
                 <img src="rbe.png" alt="Logo" class="h-8 w-8 object-contain">
                 <span class="font-bold text-brand-hover hidden md:block">Rumah Belajar Excel</span>
             </div>
@@ -174,15 +174,6 @@
 
     <div class="max-w-7xl mx-auto p-4 md:p-6 mt-2">
         
-        <!-- Header Utama -->
-        <div class="text-center mb-8 flex flex-col items-center">
-            <img src="rbe_depan.png" alt="Logo Rumah Belajar Excel" class="h-32 md:h-48 mb-2 object-contain bg-transparent">
-            <p class="text-gray-600 font-medium text-lg mt-2">Akses Member File Excel Bebas Tanpa Batas</p>
-            <span class="mt-3 inline-block bg-yellow-400 text-yellow-900 font-bold py-1 px-4 rounded-full text-sm shadow-sm border border-yellow-500 tracking-wide">
-                <i class="fas fa-star text-xs mr-1"></i> Belajar Excel Gak Nyesel
-            </span>
-        </div>
-
         <!-- ============================================== -->
         <!-- VIEW 1: APLIKASI UTAMA (PENCARIAN & TABEL FILE)-->
         <!-- ============================================== -->
@@ -201,7 +192,7 @@
                 <ul id="categoryList" class="space-y-2 max-h-64 md:max-h-[70vh] overflow-y-auto custom-scrollbar pr-2 hidden">
                     <li>
                         <button onclick="openFolder(ROOT_FOLDER_ID, 'Semua File', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border" id="btn-root">
-                            <i class="fas fa-home mr-2 w-5 text-center"></i> Semua File
+                            <img src="rbe.png" alt="RBE" class="w-5 h-5 mr-2 inline-block object-contain"> Semua File
                         </button>
                     </li>
                 </ul>
@@ -321,7 +312,7 @@
             <div id="adminMembersSection">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-gray-700">Daftar Registrasi Member</h3>
-                    <button onclick="loadAdminMembers()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded transition">
+                    <button onclick="loadAdminMembers()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded transition flex items-center">
                         <i class="fas fa-sync-alt mr-1"></i> Refresh Data
                     </button>
                 </div>
@@ -336,6 +327,7 @@
                             <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <th class="px-6 py-4">Waktu Daftar</th>
                                 <th class="px-6 py-4">Username</th>
+                                <th class="px-6 py-4">Password</th> <!-- Tambahan Kolom Password -->
                                 <th class="px-6 py-4 text-center">Status</th>
                                 <th class="px-6 py-4 text-center">Aksi (Izin Login)</th>
                             </tr>
@@ -352,9 +344,13 @@
 
             <!-- SEKSI 2: LOG UNDUHAN -->
             <div id="adminLogsSection" class="hidden">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
                     <h3 class="font-bold text-gray-700">Riwayat File Diunduh</h3>
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <!-- Tambahan Tombol Refresh Data Log -->
+                        <button onclick="loadAdminData()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded transition flex items-center">
+                            <i class="fas fa-sync-alt mr-1"></i> Refresh Data
+                        </button>
                         <button onclick="downloadExcelLog()" class="text-xs text-green-600 hover:text-white border border-green-600 hover:bg-green-600 py-1.5 px-3 rounded transition flex items-center">
                             <i class="fas fa-file-excel mr-1"></i> Unduh (.xlsx)
                         </button>
@@ -403,7 +399,6 @@
         // ==========================================
         // SISTEM OTENTIKASI MEMBER (Remember Me)
         // ==========================================
-        // Mengecek Local Storage (Remember Me) terlebih dahulu, jika kosong baru cek Session Storage
         let loggedInMember = JSON.parse(localStorage.getItem('rbe_logged_member')) || JSON.parse(sessionStorage.getItem('rbe_logged_member')) || null;
         
         let anonGuestId = sessionStorage.getItem('rbe_guest_user');
@@ -475,13 +470,11 @@
             errUser.classList.add('hidden');
             errPwd.classList.add('hidden');
 
-            // Validasi: Username hanya huruf & spasi (tanpa angka)
             if (!/^[A-Za-z\s]+$/.test(user) || user.length < 3) {
                 errUser.innerText = "Username hanya boleh berisi huruf dan spasi (min. 3 huruf).";
                 errUser.classList.remove('hidden');
                 return;
             }
-            // Validasi: Password wajib persis 4 angka
             if (!/^\d{4}$/.test(pass)) {
                 errPwd.innerText = "Password wajib berisi 4 digit angka terakhir No HP Anda.";
                 errPwd.classList.remove('hidden');
@@ -489,7 +482,6 @@
             }
 
             try {
-                // Cek apakah username sudah ada (Anti Ganda) menggunakan maybeSingle()
                 const { data: existingUser } = await supabaseClient
                     .from('users_rbe')
                     .select('username')
@@ -502,7 +494,6 @@
                     return;
                 }
 
-                // Insert ke Supabase
                 const { error } = await supabaseClient
                     .from('users_rbe')
                     .insert([{ username: user.toLowerCase(), password: pass, status: 'pending' }]);
@@ -547,11 +538,9 @@
                     return;
                 }
 
-                // Jika status approved
                 alert(`Selamat datang kembali, ${userData.username.toUpperCase()}!`);
                 loggedInMember = userData;
                 
-                // Cek apakah user ingin menyimpan info login (Remember Me)
                 const rememberMe = document.getElementById('rememberMe').checked;
                 if (rememberMe) {
                     localStorage.setItem('rbe_logged_member', JSON.stringify(userData));
@@ -561,7 +550,7 @@
                 
                 updateAuthUI();
                 closeAuthModal();
-                triggerSearch(); // Refresh list file agar tombol unduh terbuka
+                triggerSearch(); 
 
             } catch(e) {
                 console.error("Error Login:", e);
@@ -575,7 +564,7 @@
                 localStorage.removeItem('rbe_logged_member');
                 sessionStorage.removeItem('rbe_logged_member');
                 updateAuthUI();
-                triggerSearch(); // Refresh list agar file terkunci kembali
+                triggerSearch(); 
             }
         }
 
@@ -702,7 +691,6 @@
                         const dateObj = new Date(user.created_at);
                         const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
                         
-                        // Status Badge
                         let statusBadge = '';
                         if (user.status === 'pending') statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">Menunggu</span>';
                         else if (user.status === 'approved') statusBadge = '<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Disetujui</span>';
@@ -713,6 +701,8 @@
                         tr.innerHTML = `
                             <td class="px-6 py-3 text-sm text-gray-500">${formattedDate}</td>
                             <td class="px-6 py-3 text-sm font-bold text-gray-700 uppercase">${user.username}</td>
+                            <!-- Kolom Password Ditambahkan -->
+                            <td class="px-6 py-3 text-sm font-mono text-gray-600 tracking-widest font-semibold">${user.password}</td>
                             <td class="px-6 py-3 text-sm text-center">${statusBadge}</td>
                             <td class="px-6 py-3 text-sm text-center">
                                 ${user.status === 'pending' || user.status === 'rejected' ? 
@@ -744,7 +734,7 @@
                     .eq('id', id);
                 
                 if(error) throw error;
-                loadAdminMembers(); // refresh
+                loadAdminMembers(); 
             } catch(e) {
                 console.error(e);
                 alert("Gagal memperbarui status.");
@@ -775,6 +765,9 @@
                     .from('log_unduhan')
                     .select('*')
                     .order('waktu', { ascending: false });
+                
+                // Menangkap Error jika RLS belum dimatikan
+                if (error) throw error;
                 
                 let history = [];
                 if(data) {
@@ -820,7 +813,10 @@
                         tbody.appendChild(tr);
                     });
                 }
-            } catch(e) { console.error("Error Load Supabase:", e); }
+            } catch(e) { 
+                console.error("Error Load Supabase (Log Unduhan):", e); 
+                alert("Peringatan: Gagal memuat data log. Jika data tidak muncul, pastikan Anda telah menekan tombol 'Disable RLS' pada tabel 'log_unduhan' di Supabase.");
+            }
             finally {
                 loading.classList.add('hidden');
                 loading.classList.remove('flex');
@@ -1033,7 +1029,6 @@
                     
                     let actionButton = '';
                     
-                    // STATUS KETIKA SUDAH LOGIN & DISETUJUI ADMIN
                     if (loggedInMember && loggedInMember.status === 'approved') {
                         if (isFolder) {
                             actionButton = `
@@ -1059,9 +1054,7 @@
                             `;
                         }
                     } 
-                    // STATUS KETIKA BELUM LOGIN / BELUM DISETUJUI
                     else {
-                        // Baik Folder maupun File digembok (Terkunci)
                         actionButton = `
                             <div class="flex items-center justify-center gap-2">
                                 <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Tautan">
