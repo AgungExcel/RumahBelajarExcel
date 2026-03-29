@@ -5,39 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rumah Belajar Excel - Pencarian File</title>
     
-    <!-- Meta Tags untuk Thumbnail Share (WhatsApp, Facebook, Twitter, dll) -->
+    <!-- Meta Tags untuk Thumbnail Share -->
     <meta property="og:title" content="Rumah Belajar Excel - Download File">
     <meta property="og:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
-    <meta property="og:image" content="rbe_depan.png">
+    <meta property="og:url" content="https://website-anda.com/">
+    <meta property="og:image" content="https://website-anda.com/rbe_depan.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta property="og:type" content="website">
+    
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Rumah Belajar Excel - Download File">
     <meta name="twitter:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
-    <meta name="twitter:image" content="rbe_depan.png">
+    <meta name="twitter:image" content="https://website-anda.com/rbe_depan.png">
     
-    <!-- Favicon (menggunakan ?v=2 untuk memaksa browser merefresh cache gambar lama) -->
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="rbe.png?v=2">
     
-    <!-- Menggunakan Tailwind CSS -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Library untuk Export Excel (SheetJS) -->
+    <!-- SheetJS -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-    <!-- Library Supabase JS -->
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Konfigurasi Tema Dinamis Tailwind -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         brand: {
-                            light: '#f0fdf4',  /* bg-green-50 */
-                            border: '#bbf7d0', /* border-green-200 */
-                            main: '#16a34a',   /* bg-green-600 */
-                            hover: '#15803d',  /* bg-green-700 */
+                            light: '#f0fdf4',
+                            border: '#bbf7d0',
+                            main: '#16a34a',
+                            hover: '#15803d',
                         }
                     }
                 }
@@ -45,11 +48,10 @@
         }
     </script>
 
-    <!-- FontAwesome untuk Icon -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Animasi loading spinner */
         .loader {
             border-top-color: #16a34a; 
             -webkit-animation: spinner 1.5s linear infinite;
@@ -59,34 +61,37 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        /* Custom scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans text-gray-800 transition-colors duration-300">
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800 transition-colors duration-300 relative">
 
     <!-- Top Navigation Bar -->
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
+    <nav class="bg-white shadow-sm sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <!-- Logo transparan di navbar (tanpa bg-white) -->
                 <img src="rbe.png" alt="Logo" class="h-8 w-8 object-contain">
                 <span class="font-bold text-brand-hover hidden md:block">Rumah Belajar Excel</span>
             </div>
             
-            <div class="flex items-center gap-2 md:gap-4">
-                <!-- Tombol Bagikan Web -->
-                <button onclick="shareWeb()" class="text-gray-600 hover:text-brand-main font-medium py-1.5 px-3 rounded-md transition duration-200 text-sm flex items-center border border-transparent hover:bg-brand-light">
+            <div class="flex items-center gap-2 md:gap-4 flex-wrap justify-end">
+                <button onclick="shareWeb()" class="text-gray-600 hover:text-brand-main font-medium py-1.5 px-2 md:px-3 rounded-md transition duration-200 text-sm flex items-center border border-transparent hover:bg-brand-light">
                     <i class="fas fa-share-nodes mr-1 md:mr-2"></i> <span class="hidden md:inline">Bagikan Web</span>
                 </button>
                 
-                <!-- Tombol Admin -->
+                <!-- Auth Container -->
+                <div id="authNavContainer" class="flex items-center">
+                    <!-- Tombol Login (Akan diganti dengan info user jika sudah login) -->
+                    <button onclick="openAuthModal()" id="btnLoginNav" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login Member
+                    </button>
+                </div>
+                
                 <button onclick="toggleView('admin')" id="navBtnAdmin" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
-                    <i class="fas fa-user-shield mr-2"></i> <span class="hidden md:inline">Menu Admin</span>
+                    <i class="fas fa-user-shield mr-2"></i> <span class="hidden md:inline">Admin</span>
                 </button>
                 <button onclick="toggleView('main')" id="navBtnHome" class="hidden bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                     <i class="fas fa-home mr-2"></i> <span class="hidden md:inline">Beranda</span>
@@ -95,13 +100,49 @@
         </div>
     </nav>
 
+    <!-- Modal Login / Daftar -->
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+            <div class="flex border-b">
+                <button onclick="switchAuthTab('login')" id="tabLoginBtn" class="w-1/2 py-4 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light">Login</button>
+                <button onclick="switchAuthTab('register')" id="tabRegisterBtn" class="w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent">Daftar Member</button>
+            </div>
+            
+            <div class="p-6">
+                <!-- Form Login -->
+                <div id="loginForm">
+                    <h3 class="text-lg font-bold mb-4 text-center">Masuk ke Member RBE</h3>
+                    <input type="text" id="loginUsername" placeholder="Username (Nama)" class="w-full mb-4 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main">
+                    <input type="password" id="loginPassword" placeholder="Password (4 Angka)" class="w-full mb-6 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main" maxlength="4">
+                    <button onclick="processLogin()" class="w-full bg-brand-main hover:bg-brand-hover text-white font-bold py-2 px-4 rounded-lg transition duration-200">Login</button>
+                </div>
+
+                <!-- Form Register -->
+                <div id="registerForm" class="hidden">
+                    <h3 class="text-lg font-bold mb-2 text-center">Daftar Member Baru</h3>
+                    <p class="text-xs text-center text-gray-500 mb-4">Pendaftaran harus disetujui Admin sebelum bisa login.</p>
+                    <div class="mb-4">
+                        <input type="text" id="regUsername" placeholder="Username (Hanya Huruf, Tanpa Angka)" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main">
+                        <p class="text-xs text-red-500 mt-1 hidden" id="errRegUser">Username hanya boleh berisi huruf dan spasi.</p>
+                    </div>
+                    <div class="mb-6">
+                        <input type="password" id="regPassword" placeholder="Password (Wajib 4 Digit Angka)" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main" maxlength="4">
+                        <p class="text-xs text-red-500 mt-1 hidden" id="errRegPwd">Password wajib berisi 4 digit angka.</p>
+                    </div>
+                    <button onclick="processRegister()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Daftar Sekarang</button>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 border-t text-right">
+                <button onclick="closeAuthModal()" class="text-gray-600 hover:text-gray-800 font-medium text-sm">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <div class="max-w-7xl mx-auto p-4 md:p-6 mt-2">
         
         <!-- Header Utama -->
         <div class="text-center mb-8 flex flex-col items-center">
-            <!-- Logo Utama diganti rbe_depan.png -->
             <img src="rbe_depan.png" alt="Logo Rumah Belajar Excel" class="h-32 md:h-48 mb-2 object-contain bg-transparent">
-            
             <p class="text-gray-600 font-medium text-lg mt-2">Akses Member File Excel Bebas Tanpa Batas</p>
             <span class="mt-3 inline-block bg-yellow-400 text-yellow-900 font-bold py-1 px-4 rounded-full text-sm shadow-sm border border-yellow-500 tracking-wide">
                 <i class="fas fa-star text-xs mr-1"></i> Belajar Excel Gak Nyesel
@@ -156,12 +197,11 @@
                                 onkeypress="handleKeyPress(event)">
                         </div>
                         
-                        <!-- Dropdown Filter Format -->
                         <div class="w-full md:w-4/12 relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-filter text-gray-400"></i>
                             </div>
-                            <select id="fileFormatFilter" class="w-full pl-10 pr-8 py-3 border-gray-300 border rounded-lg focus:ring-2 focus:ring-brand-main focus:border-transparent transition text-sm text-gray-600 outline-none cursor-pointer appearance-none bg-white">
+                            <select id="fileFormatFilter" onchange="triggerSearch()" class="w-full pl-10 pr-8 py-3 border-gray-300 border rounded-lg focus:ring-2 focus:ring-brand-main focus:border-transparent transition text-sm text-gray-600 outline-none cursor-pointer appearance-none bg-white">
                                 <option value="">Semua Format File</option>
                                 <option value="excel">Excel (.xlsx, .xls, .csv)</option>
                                 <option value="word">Word (.docx, .doc)</option>
@@ -215,87 +255,285 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- VIEW 2: ADMIN PANEL (AKTIVITAS UNDUHAN)        -->
+        <!-- VIEW 2: ADMIN PANEL                            -->
         <!-- ============================================== -->
         <div id="adminView" class="hidden bg-white rounded-lg shadow-md p-6">
+            
             <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-chart-line text-brand-main mr-3"></i> Log Aktivitas Unduhan
+                        <i class="fas fa-cogs text-gray-800 mr-3"></i> Panel Admin RBE
                     </h2>
-                    <p class="text-sm text-gray-500 mt-1">Real-time tersambung ke Database Supabase.</p>
+                    <p class="text-sm text-gray-500 mt-1">Kelola pendaftaran member dan riwayat unduhan.</p>
                 </div>
-                <div class="mt-4 md:mt-0 bg-brand-light border border-brand-border text-brand-hover px-4 py-2 rounded-lg text-center shadow-sm">
-                    <span class="block text-xs font-bold uppercase tracking-wider">Total Unduhan</span>
-                    <span id="totalDownloads" class="text-2xl font-black">0</span>
-                </div>
-            </div>
-
-            <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
-                <h3 class="font-bold text-gray-700">Riwayat File Diunduh</h3>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="changeAdminPassword()" class="text-xs text-blue-600 hover:text-white border border-blue-600 hover:bg-blue-600 py-1.5 px-3 rounded transition flex items-center">
+                <div class="mt-4 md:mt-0 flex gap-2">
+                    <button onclick="changeAdminPassword()" class="text-xs text-blue-600 hover:text-white border border-blue-600 hover:bg-blue-600 py-2 px-3 rounded transition flex items-center shadow-sm">
                         <i class="fas fa-key mr-1"></i> Ganti Password
                     </button>
-                    <button onclick="downloadExcelLog()" class="text-xs text-green-600 hover:text-white border border-green-600 hover:bg-green-600 py-1.5 px-3 rounded transition flex items-center">
-                        <i class="fas fa-file-excel mr-1"></i> Unduh Excel (.xlsx)
-                    </button>
-                    <button onclick="clearAdminData()" class="text-xs text-red-600 hover:text-white border border-red-600 hover:bg-red-600 py-1.5 px-3 rounded transition flex items-center">
-                        <i class="fas fa-trash-alt mr-1"></i> Reset Log Data
-                    </button>
                 </div>
             </div>
 
-            <div class="overflow-x-auto border rounded-lg relative">
-                <!-- Loading Admin Table -->
-                <div id="adminLoadingIndicator" class="absolute inset-0 bg-white/90 z-10 hidden flex-col justify-center items-center">
-                    <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mb-2"></div>
-                    <p class="text-brand-hover font-medium text-xs">Memuat Log Supabase...</p>
-                </div>
+            <!-- Tab Navigasi Admin -->
+            <div class="flex border-b mb-6">
+                <button onclick="switchAdminTab('members')" id="adminTabMembersBtn" class="px-6 py-3 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light flex items-center">
+                    <i class="fas fa-users mr-2"></i> Manajemen Member
+                </button>
+                <button onclick="switchAdminTab('logs')" id="adminTabLogsBtn" class="px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent flex items-center">
+                    <i class="fas fa-download mr-2"></i> Log Unduhan
+                </button>
+            </div>
 
-                <table class="w-full whitespace-nowrap min-w-full">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            <th class="px-6 py-4">Waktu</th>
-                            <th class="px-6 py-4">ID Pengguna</th>
-                            <th class="px-6 py-4">Nama File</th>
-                            <th class="px-6 py-4 text-right">Ukuran</th>
-                        </tr>
-                    </thead>
-                    <tbody id="adminTableBody" class="divide-y divide-gray-200 bg-white">
-                        <!-- Data Admin -->
-                    </tbody>
-                </table>
-                <div id="adminEmptyState" class="hidden py-10 text-center text-gray-500 text-sm">
-                    Belum ada aktivitas unduhan yang tercatat.
+            <!-- SEKSI 1: MANAJEMEN MEMBER -->
+            <div id="adminMembersSection">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-700">Daftar Registrasi Member</h3>
+                    <button onclick="loadAdminMembers()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded transition">
+                        <i class="fas fa-sync-alt mr-1"></i> Refresh Data
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto border rounded-lg relative min-h-[200px]">
+                    <div id="memberLoadingIndicator" class="absolute inset-0 bg-white/90 z-10 hidden flex-col justify-center items-center">
+                        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mb-2"></div>
+                        <p class="text-brand-hover font-medium text-xs">Memuat Data Member...</p>
+                    </div>
+                    <table class="w-full whitespace-nowrap min-w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <th class="px-6 py-4">Waktu Daftar</th>
+                                <th class="px-6 py-4">Username</th>
+                                <th class="px-6 py-4 text-center">Status</th>
+                                <th class="px-6 py-4 text-center">Aksi (Izin Login)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberTableBody" class="divide-y divide-gray-200 bg-white">
+                            <!-- Data Member Admin -->
+                        </tbody>
+                    </table>
+                    <div id="memberEmptyState" class="hidden py-10 text-center text-gray-500 text-sm">
+                        Belum ada member yang terdaftar.
+                    </div>
                 </div>
             </div>
+
+            <!-- SEKSI 2: LOG UNDUHAN -->
+            <div id="adminLogsSection" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-700">Riwayat File Diunduh</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="downloadExcelLog()" class="text-xs text-green-600 hover:text-white border border-green-600 hover:bg-green-600 py-1.5 px-3 rounded transition flex items-center">
+                            <i class="fas fa-file-excel mr-1"></i> Unduh (.xlsx)
+                        </button>
+                        <button onclick="clearAdminData()" class="text-xs text-red-600 hover:text-white border border-red-600 hover:bg-red-600 py-1.5 px-3 rounded transition flex items-center">
+                            <i class="fas fa-trash-alt mr-1"></i> Reset Log
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto border rounded-lg relative min-h-[200px]">
+                    <div id="adminLoadingIndicator" class="absolute inset-0 bg-white/90 z-10 hidden flex-col justify-center items-center">
+                        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mb-2"></div>
+                        <p class="text-brand-hover font-medium text-xs">Memuat Log...</p>
+                    </div>
+                    <table class="w-full whitespace-nowrap min-w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <th class="px-6 py-4">Waktu</th>
+                                <th class="px-6 py-4">Pengguna</th>
+                                <th class="px-6 py-4">Nama File</th>
+                                <th class="px-6 py-4 text-right">Ukuran</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y divide-gray-200 bg-white">
+                        </tbody>
+                    </table>
+                    <div id="adminEmptyState" class="hidden py-10 text-center text-gray-500 text-sm">
+                        Belum ada aktivitas unduhan yang tercatat.
+                    </div>
+                </div>
+            </div>
+
         </div>
-
     </div>
 
     <!-- Script Utama -->
     <script>
         // ==========================================
-        // KONFIGURASI SUPABASE DATABASE (REALTIME)
+        // KONFIGURASI SUPABASE DATABASE
         // ==========================================
-        
         const SUPABASE_URL = 'https://zopppritiajuxggghowg.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcHBwcml0aWFqdXhnZ2dob3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzExNDUsImV4cCI6MjA5MDM0NzE0NX0.rjNya_AgiaFeNAuPAzfeRjLuZdQnB9LIBVX-AcFnqJI'; 
 
-        let supabaseClient = null;
-        let isSupabaseActive = false;
+        let supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let isSupabaseActive = true;
 
-        if(SUPABASE_KEY !== 'KUNCI_ANON_SUPABASE_ANDA_DISINI') {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            isSupabaseActive = true;
+        // ==========================================
+        // SISTEM OTENTIKASI MEMBER
+        // ==========================================
+        let loggedInMember = JSON.parse(sessionStorage.getItem('rbe_logged_member')) || null;
+        
+        // Simpan anon id untuk user publik yang belum login agar log unduhan tetap tercatat sebagai "Tamu"
+        let anonGuestId = sessionStorage.getItem('rbe_guest_user');
+        if (!anonGuestId) {
+            anonGuestId = 'Tamu-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+            sessionStorage.setItem('rbe_guest_user', anonGuestId);
         }
 
-        // === IDENTITAS USER SIMULASI ===
-        let currentUserId = sessionStorage.getItem('rbe_session_user');
-        if (!currentUserId) {
-            currentUserId = 'User-' + Math.random().toString(36).substr(2, 5).toUpperCase();
-            sessionStorage.setItem('rbe_session_user', currentUserId);
+        // --- UI Modal & Navigasi ---
+        function updateAuthUI() {
+            const container = document.getElementById('authNavContainer');
+            if (loggedInMember) {
+                container.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-sm font-bold text-gray-700 mr-3"><i class="fas fa-user-check text-brand-main mr-1"></i> Halo, ${loggedInMember.username}</span>
+                        <button onclick="processLogout()" class="bg-red-500 hover:bg-red-600 text-white font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm">
+                            Logout
+                        </button>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <button onclick="openAuthModal()" id="btnLoginNav" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login / Daftar Member
+                    </button>
+                `;
+            }
+        }
+        
+        // Panggil saat load pertama kali
+        document.addEventListener('DOMContentLoaded', () => {
+            updateAuthUI();
+        });
+
+        function openAuthModal() {
+            document.getElementById('authModal').classList.remove('hidden');
+            switchAuthTab('login');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        function switchAuthTab(tab) {
+            const btnLog = document.getElementById('tabLoginBtn');
+            const btnReg = document.getElementById('tabRegisterBtn');
+            const formLog = document.getElementById('loginForm');
+            const formReg = document.getElementById('registerForm');
+
+            if (tab === 'login') {
+                btnLog.className = "w-1/2 py-4 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light";
+                btnReg.className = "w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent";
+                formLog.classList.remove('hidden');
+                formReg.classList.add('hidden');
+            } else {
+                btnReg.className = "w-1/2 py-4 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light";
+                btnLog.className = "w-1/2 py-4 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent";
+                formReg.classList.remove('hidden');
+                formLog.classList.add('hidden');
+            }
+        }
+
+        // --- Logic Register & Login ---
+        async function processRegister() {
+            const user = document.getElementById('regUsername').value.trim();
+            const pass = document.getElementById('regPassword').value.trim();
+            
+            const errUser = document.getElementById('errRegUser');
+            const errPwd = document.getElementById('errRegPwd');
+            errUser.classList.add('hidden');
+            errPwd.classList.add('hidden');
+
+            // Validasi: Username hanya huruf & spasi (tanpa angka)
+            if (!/^[A-Za-z\s]+$/.test(user) || user.length < 3) {
+                errUser.classList.remove('hidden');
+                return;
+            }
+            // Validasi: Password wajib persis 4 angka
+            if (!/^\d{4}$/.test(pass)) {
+                errPwd.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // Cek apakah username sudah ada
+                const { data: existingUser } = await supabaseClient
+                    .from('users_rbe')
+                    .select('username')
+                    .eq('username', user.toLowerCase())
+                    .single();
+
+                if (existingUser) {
+                    alert("Username sudah terdaftar! Silakan pilih nama lain.");
+                    return;
+                }
+
+                // Insert ke Supabase
+                const { error } = await supabaseClient
+                    .from('users_rbe')
+                    .insert([{ username: user.toLowerCase(), password: pass, status: 'pending' }]);
+
+                if (error) throw error;
+
+                alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN. Anda baru bisa login setelah Admin menyetujuinya.");
+                switchAuthTab('login');
+                document.getElementById('regUsername').value = '';
+                document.getElementById('regPassword').value = '';
+
+            } catch (err) {
+                console.error("Error Register:", err);
+                alert("Terjadi kesalahan sistem saat mendaftar. (Pastikan tabel 'users_rbe' sudah dibuat di Supabase).");
+            }
+        }
+
+        async function processLogin() {
+            const user = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const pass = document.getElementById('loginPassword').value.trim();
+
+            if (!user || !pass) return alert("Harap isi username dan password.");
+
+            try {
+                const { data: userData, error } = await supabaseClient
+                    .from('users_rbe')
+                    .select('*')
+                    .eq('username', user)
+                    .eq('password', pass)
+                    .single();
+
+                if (error || !userData) {
+                    alert("Login Gagal! Username atau password salah.");
+                    return;
+                }
+
+                // Cek Status Persetujuan Admin
+                if (userData.status === 'pending') {
+                    alert("Akses Ditolak: Akun Anda masih menunggu persetujuan Admin.");
+                    return;
+                } else if (userData.status === 'rejected') {
+                    alert("Akses Ditolak: Pendaftaran Anda telah ditolak oleh Admin.");
+                    return;
+                }
+
+                // Jika status approved (disetujui)
+                alert(`Selamat datang kembali, ${userData.username}!`);
+                loggedInMember = userData;
+                sessionStorage.setItem('rbe_logged_member', JSON.stringify(userData));
+                
+                updateAuthUI();
+                closeAuthModal();
+                triggerSearch(); // Refresh list file agar tombol unduh terbuka
+
+            } catch(e) {
+                console.error("Error Login:", e);
+                alert("Terjadi kesalahan server saat mencoba login.");
+            }
+        }
+
+        function processLogout() {
+            if(confirm("Apakah Anda yakin ingin keluar?")) {
+                loggedInMember = null;
+                sessionStorage.removeItem('rbe_logged_member');
+                updateAuthUI();
+                triggerSearch(); // Refresh list agar tombol terkunci lagi
+            }
         }
 
         // === FUNGSI BAGIKAN WEB & FILE ===
@@ -326,7 +564,7 @@
             }
         }
 
-        // === FUNGSI PASSWORD ADMIN ===
+        // === FUNGSI MENU ADMIN (MULTI-TAB) ===
         function toggleView(view) {
             const mainView = document.getElementById('mainView');
             const adminView = document.getElementById('adminView');
@@ -343,7 +581,9 @@
                     adminView.classList.remove('hidden');
                     navBtnAdmin.classList.add('hidden');
                     navBtnHome.classList.remove('hidden');
-                    loadAdminData(); 
+                    
+                    // Default open Member tab
+                    switchAdminTab('members');
                 } else {
                     alert("Password yang Anda masukkan SALAH!");
                 }
@@ -352,6 +592,27 @@
                 mainView.classList.remove('hidden');
                 navBtnHome.classList.add('hidden');
                 navBtnAdmin.classList.remove('hidden');
+            }
+        }
+
+        function switchAdminTab(tabName) {
+            const btnMembers = document.getElementById('adminTabMembersBtn');
+            const btnLogs = document.getElementById('adminTabLogsBtn');
+            const secMembers = document.getElementById('adminMembersSection');
+            const secLogs = document.getElementById('adminLogsSection');
+
+            if (tabName === 'members') {
+                btnMembers.className = "px-6 py-3 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light flex items-center";
+                btnLogs.className = "px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent flex items-center";
+                secMembers.classList.remove('hidden');
+                secLogs.classList.add('hidden');
+                loadAdminMembers();
+            } else {
+                btnLogs.className = "px-6 py-3 font-bold text-brand-main border-b-2 border-brand-main bg-brand-light flex items-center";
+                btnMembers.className = "px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 border-b-2 border-transparent flex items-center";
+                secLogs.classList.remove('hidden');
+                secMembers.classList.add('hidden');
+                loadAdminData();
             }
         }
 
@@ -373,19 +634,91 @@
             }
         }
 
-        // === FUNGSI ADMIN & TRACKING (SUPABASE / LOCAL) ===
-        async function trackDownload(fileName, fileSize) {
-            if (isSupabaseActive) {
-                try {
-                    await supabaseClient.from('log_unduhan').insert([
-                        { id_pengguna: currentUserId, nama_file: fileName, ukuran_file: fileSize }
-                    ]);
-                } catch(e) { console.error("Error Supabase:", e); }
-            } else {
-                let history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
-                history.unshift({ time: new Date().toISOString(), user: currentUserId, fileName: fileName, size: fileSize });
-                localStorage.setItem('rbe_downloads', JSON.stringify(history));
+        // --- MANAJEMEN MEMBER ADMIN ---
+        async function loadAdminMembers() {
+            const tbody = document.getElementById('memberTableBody');
+            const emptyState = document.getElementById('memberEmptyState');
+            const loading = document.getElementById('memberLoadingIndicator');
+            
+            tbody.innerHTML = '';
+            loading.classList.remove('hidden');
+            loading.classList.add('flex');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('users_rbe')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if(error) throw error;
+
+                if (!data || data.length === 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                    data.forEach(user => {
+                        const dateObj = new Date(user.created_at);
+                        const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                        
+                        // Status Badge
+                        let statusBadge = '';
+                        if (user.status === 'pending') statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">Menunggu</span>';
+                        else if (user.status === 'approved') statusBadge = '<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Disetujui</span>';
+                        else statusBadge = '<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">Ditolak</span>';
+
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-gray-50';
+                        tr.innerHTML = `
+                            <td class="px-6 py-3 text-sm text-gray-500">${formattedDate}</td>
+                            <td class="px-6 py-3 text-sm font-bold text-gray-700 uppercase">${user.username}</td>
+                            <td class="px-6 py-3 text-sm text-center">${statusBadge}</td>
+                            <td class="px-6 py-3 text-sm text-center">
+                                ${user.status === 'pending' || user.status === 'rejected' ? 
+                                `<button onclick="updateMemberStatus(${user.id}, 'approved')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs mr-1 shadow-sm"><i class="fas fa-check"></i> Setujui</button>` : ''}
+                                
+                                ${user.status === 'pending' || user.status === 'approved' ? 
+                                `<button onclick="updateMemberStatus(${user.id}, 'rejected')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs shadow-sm"><i class="fas fa-times"></i> Tolak</button>` : ''}
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch(e) {
+                console.error("Error Load Member:", e);
+                alert("Gagal memuat data member. Pastikan Anda telah membuat tabel users_rbe.");
+            } finally {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
             }
+        }
+
+        async function updateMemberStatus(id, newStatus) {
+            if(!confirm(`Apakah Anda yakin ingin ${newStatus === 'approved' ? 'MENYETUJUI' : 'MENOLAK'} pendaftaran ini?`)) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('users_rbe')
+                    .update({ status: newStatus })
+                    .eq('id', id);
+                
+                if(error) throw error;
+                loadAdminMembers(); // refresh
+            } catch(e) {
+                console.error(e);
+                alert("Gagal memperbarui status.");
+            }
+        }
+
+        // --- TRACKING LOG UNDUHAN ---
+        async function trackDownload(fileName, fileSize) {
+            // Gunakan username jika sudah login, jika belum gunakan ID Tamu
+            const identifier = loggedInMember ? loggedInMember.username : anonGuestId;
+            
+            try {
+                await supabaseClient.from('log_unduhan').insert([
+                    { id_pengguna: identifier, nama_file: fileName, ukuran_file: fileSize }
+                ]);
+            } catch(e) { console.error("Error Supabase:", e); }
         }
 
         async function loadAdminData() {
@@ -397,86 +730,74 @@
             loading.classList.remove('hidden');
             loading.classList.add('flex');
 
-            let history = [];
+            try {
+                const { data, error } = await supabaseClient
+                    .from('log_unduhan')
+                    .select('*')
+                    .order('waktu', { ascending: false });
+                
+                let history = [];
+                if(data) {
+                    history = data.map(d => ({
+                        time: d.waktu,
+                        user: d.id_pengguna,
+                        fileName: d.nama_file,
+                        size: d.ukuran_file
+                    }));
+                }
 
-            if (isSupabaseActive) {
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('log_unduhan')
-                        .select('*')
-                        .order('waktu', { ascending: false });
-                    if(data) {
-                        history = data.map(d => ({
-                            time: d.waktu,
-                            user: d.id_pengguna,
-                            fileName: d.nama_file,
-                            size: d.ukuran_file
-                        }));
-                    }
-                } catch(e) { console.error("Error Load Supabase:", e); }
-            } else {
-                history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
-            }
+                document.getElementById('totalDownloads').innerText = history.length;
+                window.currentLogData = history;
 
-            loading.classList.add('hidden');
-            loading.classList.remove('flex');
-            
-            document.getElementById('totalDownloads').innerText = history.length;
-            window.currentLogData = history;
-
-            if (history.length === 0) {
-                emptyState.classList.remove('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-                history.forEach(log => {
-                    const dateObj = new Date(log.time);
-                    const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-                    const formattedTime = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-                    
-                    const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-gray-50';
-                    tr.innerHTML = `
-                        <td class="px-6 py-3 text-sm text-gray-500">
-                            <span class="font-medium text-gray-700">${formattedDate}</span><br>
-                            <span class="text-xs">${formattedTime} WIB</span>
-                        </td>
-                        <td class="px-6 py-3 text-sm">
-                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono border border-gray-200">
-                                <i class="fas fa-user text-gray-400 mr-1"></i> ${log.user}
-                            </span>
-                        </td>
-                        <td class="px-6 py-3 text-sm font-medium text-brand-hover truncate max-w-[200px] md:max-w-md" title="${log.fileName}">
-                            ${log.fileName}
-                        </td>
-                        <td class="px-6 py-3 text-sm text-gray-500 text-right">
-                            ${formatBytes(log.size)}
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                if (history.length === 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                    history.forEach(log => {
+                        const dateObj = new Date(log.time);
+                        const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                        const formattedTime = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                        
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-gray-50';
+                        tr.innerHTML = `
+                            <td class="px-6 py-3 text-sm text-gray-500">
+                                <span class="font-medium text-gray-700">${formattedDate}</span><br>
+                                <span class="text-xs">${formattedTime} WIB</span>
+                            </td>
+                            <td class="px-6 py-3 text-sm">
+                                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono border border-gray-200 uppercase">
+                                    <i class="fas fa-user text-gray-400 mr-1"></i> ${log.user}
+                                </span>
+                            </td>
+                            <td class="px-6 py-3 text-sm font-medium text-brand-hover truncate max-w-[200px] md:max-w-md" title="${log.fileName}">
+                                ${log.fileName}
+                            </td>
+                            <td class="px-6 py-3 text-sm text-gray-500 text-right">
+                                ${formatBytes(log.size)}
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch(e) { console.error("Error Load Supabase:", e); }
+            finally {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
             }
         }
 
         async function clearAdminData() {
             if(confirm("PERINGATAN! Anda yakin ingin menghapus seluruh log unduhan?\nData yang dihapus tidak dapat dikembalikan.")) {
-                if(isSupabaseActive) {
-                    try {
-                        await supabaseClient.from('log_unduhan').delete().not('id', 'is', null);
-                    } catch(e) { console.error("Error Reset Supabase:", e); }
-                } else {
-                    localStorage.removeItem('rbe_downloads');
-                }
-                loadAdminData();
+                try {
+                    await supabaseClient.from('log_unduhan').delete().not('id', 'is', null);
+                    loadAdminData();
+                } catch(e) { console.error("Error Reset Supabase:", e); }
             }
         }
 
-        // === FUNGSI UNDUH EXCEL (.XLSX) ===
         function downloadExcelLog() {
-            if(!window.currentLogData || window.currentLogData.length === 0) {
-                alert("Tidak ada data untuk diunduh!");
-                return;
-            }
-            
+            if(!window.currentLogData || window.currentLogData.length === 0) return alert("Tidak ada data untuk diunduh!");
             const excelData = window.currentLogData.map(log => {
                 const d = new Date(log.time);
                 return {
@@ -488,7 +809,6 @@
                     "Ukuran": formatBytes(log.size)
                 }
             });
-
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Log Unduhan");
@@ -496,7 +816,9 @@
         }
 
 
-        // === KONFIGURASI DRIVE API ===
+        // ==========================================
+        // KONFIGURASI DRIVE API (MENAMPILKAN FILE)
+        // ==========================================
         const API_KEY = 'AIzaSyCrm-_K9xGLqggF5zwklUdCVFrHgtCJX6Q';
         const ROOT_FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
         
@@ -508,7 +830,6 @@
             loadFiles(ROOT_FOLDER_ID);
         });
 
-        // 1. Memuat Kategori (Folder Root) & Simpan ID Kategori
         async function loadSidebarCategories() {
             const ul = document.getElementById('categoryList');
             const loading = document.getElementById('sidebarLoading');
@@ -545,7 +866,6 @@
             }
         }
 
-        // 2. Membuka Folder
         function openFolder(folderId, folderName, btnElement = null) {
             currentFolderId = folderId;
             document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${folderName}`;
@@ -570,14 +890,12 @@
             loadFiles(currentFolderId);
         }
 
-        // 3. Pencarian
         function handleKeyPress(e) { if (e.key === 'Enter') triggerSearch(); }
         function triggerSearch() {
             const keyword = document.getElementById('searchInput').value.trim();
             loadFiles(currentFolderId, keyword);
         }
 
-        // 4. Memuat File & Pencarian yang Diperbaiki Bebas Error
         async function loadFiles(folderId, keyword = '') {
             showTableLoading(true);
             hideMessage();
@@ -590,49 +908,36 @@
             let files = [];
 
             try {
-                // PERBAIKAN PENCARIAN GLOBAL
                 if (folderId === ROOT_FOLDER_ID && (safeKeyword !== '' || format !== '')) {
-                    
                     let parentQueries = [`'${ROOT_FOLDER_ID}' in parents`];
                     subFolderIds.forEach(id => parentQueries.push(`'${id}' in parents`));
                     
-                    // Kita pecah menjadi ukuran yang sangat kecil (batch = 5 folder per request) 
-                    // agar tidak melanggar batasan URL dari Google API (mengatasi Error 400).
                     const chunkSize = 5; 
+                    const fetchPromises = [];
                     
                     for (let i = 0; i < parentQueries.length; i += chunkSize) {
                         const chunk = parentQueries.slice(i, i + chunkSize);
                         let query = `(${chunk.join(' or ')}) and trashed = false`;
-                        
                         if (safeKeyword) query += ` and name contains '${safeKeyword}'`;
 
                         const url = new URL('https://www.googleapis.com/drive/v3/files');
                         url.searchParams.append('q', query);
                         url.searchParams.append('fields', 'files(id, name, mimeType, size, webViewLink, webContentLink)');
                         url.searchParams.append('orderBy', 'folder,name');
+                        url.searchParams.append('pageSize', '1000');
                         url.searchParams.append('key', API_KEY);
                         
-                        try {
-                            const response = await fetch(url);
-                            const data = await response.json();
-                            if (data.error) throw new Error(data.error.message);
-                            if (data.files) files = files.concat(data.files);
-                        } catch(e) {
-                            console.error("Error pada sebagian pencarian:", e);
-                        }
+                        fetchPromises.push(
+                            fetch(url).then(res => res.json()).catch(e => ({ error: { message: e.message } }))
+                        );
                     }
 
-                    // Urutkan ulang hasilnya (Folder di atas, file berabjad)
-                    files.sort((a, b) => {
-                        const aFolder = a.mimeType === 'application/vnd.google-apps.folder';
-                        const bFolder = b.mimeType === 'application/vnd.google-apps.folder';
-                        if (aFolder && !bFolder) return -1;
-                        if (!aFolder && bFolder) return 1;
-                        return a.name.localeCompare(b.name);
+                    const results = await Promise.all(fetchPromises);
+                    results.forEach(data => {
+                        if (!data.error && data.files) files = files.concat(data.files);
                     });
 
                 } else {
-                    // Pencarian Biasa (di dalam 1 folder)
                     let query = `'${folderId}' in parents and trashed = false`;
                     if (safeKeyword) query += ` and name contains '${safeKeyword}'`;
 
@@ -640,6 +945,7 @@
                     url.searchParams.append('q', query);
                     url.searchParams.append('fields', 'files(id, name, mimeType, size, webViewLink, webContentLink)');
                     url.searchParams.append('orderBy', 'folder,name');
+                    url.searchParams.append('pageSize', '1000');
                     url.searchParams.append('key', API_KEY);
 
                     const response = await fetch(url);
@@ -649,22 +955,29 @@
                     files = data.files || [];
                 }
 
-                // FILTER JAVASCRIPT: Menyaring berdasarkan format file dengan aman
                 if (format !== '') {
                     files = files.filter(file => {
-                        const mime = file.mimeType.toLowerCase();
-                        if (format === 'excel') return mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv');
-                        if (format === 'word') return mime.includes('wordprocessingml') || mime.includes('document');
-                        if (format === 'pdf') return mime.includes('pdf');
-                        if (format === 'powerpoint') return mime.includes('presentation') || mime.includes('powerpoint');
-                        if (format === 'image') return mime.includes('image');
-                        if (format === 'video') return mime.includes('video');
-                        if (format === 'archive') return mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z');
+                        const mime = (file.mimeType || '').toLowerCase();
+                        const name = (file.name || '').toLowerCase();
+                        if (format === 'excel') return mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv') || name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv');
+                        if (format === 'word') return mime.includes('wordprocessingml') || mime.includes('document') || name.endsWith('.docx') || name.endsWith('.doc');
+                        if (format === 'pdf') return mime.includes('pdf') || name.endsWith('.pdf');
+                        if (format === 'powerpoint') return mime.includes('presentation') || mime.includes('powerpoint') || name.endsWith('.pptx') || name.endsWith('.ppt');
+                        if (format === 'image') return mime.includes('image') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.bmp');
+                        if (format === 'video') return mime.includes('video') || name.endsWith('.mp4') || name.endsWith('.mkv') || name.endsWith('.avi') || name.endsWith('.mov');
+                        if (format === 'archive') return mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z') || name.endsWith('.zip') || name.endsWith('.rar');
                         return true;
                     });
                 }
 
-                // --- PROSES TAMPILKAN HASIL KE TABEL ---
+                files.sort((a, b) => {
+                    const aFolder = a.mimeType === 'application/vnd.google-apps.folder';
+                    const bFolder = b.mimeType === 'application/vnd.google-apps.folder';
+                    if (aFolder && !bFolder) return -1;
+                    if (!aFolder && bFolder) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+
                 if (files.length === 0) {
                     document.getElementById('emptyState').classList.remove('hidden');
                     return;
@@ -685,22 +998,36 @@
                                 <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Folder">
                                     <i class="fas fa-share-nodes"></i>
                                 </button>
-                                <a href="${downloadLink}" target="_blank" class="inline-flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
-                                    <i class="fas fa-download mr-2 text-xs"></i> Unduh Folder
-                                </a>
+                                <button onclick="openFolder('${file.id}', '${safeFileName}')" class="inline-flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                    <i class="fas fa-folder-open mr-2 text-xs"></i> Buka Folder
+                                </button>
                             </div>
                         `;
                     } else {
-                        actionButton = `
-                            <div class="flex items-center justify-center gap-2">
-                                <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
-                                    <i class="fas fa-share-nodes"></i>
-                                </button>
-                                <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
-                                    <i class="fas fa-download mr-2 text-xs"></i> Unduh File
-                                </a>
-                            </div>
-                        `;
+                        // LOGIKA TOMBOL UNDUH BERDASARKAN STATUS LOGIN & APPROVAL
+                        if (loggedInMember && loggedInMember.status === 'approved') {
+                            actionButton = `
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
+                                        <i class="fas fa-share-nodes"></i>
+                                    </button>
+                                    <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                        <i class="fas fa-download mr-2 text-xs"></i> Unduh File
+                                    </a>
+                                </div>
+                            `;
+                        } else {
+                            actionButton = `
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
+                                        <i class="fas fa-share-nodes"></i>
+                                    </button>
+                                    <button onclick="openAuthModal()" class="inline-flex items-center justify-center bg-gray-400 hover:bg-gray-500 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm cursor-not-allowed" title="Login untuk mengunduh">
+                                        <i class="fas fa-lock mr-2 text-xs"></i> Terkunci
+                                    </button>
+                                </div>
+                            `;
+                        }
                     }
                     
                     tr.innerHTML = `
@@ -725,8 +1052,8 @@
 
             } catch (err) {
                 console.error(err);
-                if (err.message && (err.message.includes('File not found') || err.message.includes('insufficient permissions'))) {
-                    showMessage('Akses Ditolak: Pastikan folder Google Drive sudah diatur ke "Siapa saja yang memiliki link" -> "Melihat".', 'error');
+                if (err.message && (err.message.includes('File not found') || err.message.includes('insufficient permissions') || err.message.includes('does not have sufficient permissions'))) {
+                    showMessage('Akses Ditolak: Pastikan folder Google Drive dan isinya sudah diatur ke "Siapa saja yang memiliki link" -> "Melihat".', 'error');
                 } else {
                     showMessage('Terjadi kesalahan koneksi atau pencarian. Silakan coba lagi.', 'error');
                 }
