@@ -4,15 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rumah Belajar Excel - Pencarian File</title>
+    
+    <!-- Favicon otomatis mengambil dari file RBE jpg.jpg -->
+    <link rel="icon" type="image/jpeg" href="RBE jpg.jpg">
+    
     <!-- Menggunakan Tailwind CSS untuk styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Konfigurasi Tema Dinamis Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: 'var(--brand-light)',
+                            border: 'var(--brand-border)',
+                            main: 'var(--brand-main)',
+                            hover: 'var(--brand-hover)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <!-- FontAwesome untuk Icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* Variabel Warna Tema (Default: Hijau Excel) */
+        :root {
+            --brand-light: #f0fdf4;  /* bg-green-50 */
+            --brand-border: #bbf7d0; /* border-green-200 */
+            --brand-main: #16a34a;   /* bg-green-600 */
+            --brand-hover: #15803d;  /* bg-green-700 */
+        }
+        /* Tema Biru (Word) */
+        [data-theme="blue"] {
+            --brand-light: #eff6ff;
+            --brand-border: #bfdbfe;
+            --brand-main: #2563eb;
+            --brand-hover: #1d4ed8;
+        }
+        /* Tema Oranye (PowerPoint) */
+        [data-theme="orange"] {
+            --brand-light: #fff7ed;
+            --brand-border: #fed7aa;
+            --brand-main: #ea580c;
+            --brand-hover: #c2410c;
+        }
+        /* Tema Ungu */
+        [data-theme="purple"] {
+            --brand-light: #f5f3ff;
+            --brand-border: #ddd6fe;
+            --brand-main: #7c3aed;
+            --brand-hover: #6d28d9;
+        }
+
         /* Animasi loading spinner */
         .loader {
-            border-top-color: #16a34a; /* Warna hijau Tailwind (green-600) */
+            border-top-color: var(--brand-main); 
             -webkit-animation: spinner 1.5s linear infinite;
             animation: spinner 1.5s linear infinite;
         }
@@ -21,73 +73,90 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Custom scrollbar untuk sidebar agar rapi */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800 transition-colors duration-300">
 
-    <div class="max-w-7xl mx-auto p-4 md:p-6 mt-6">
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="RBE jpg.jpg" alt="Logo" class="h-8 w-8 object-contain rounded-full border border-gray-200">
+                <span class="font-bold text-brand-hover hidden md:block">RBE App</span>
+            </div>
+            
+            <div class="flex items-center gap-3 md:gap-4">
+                <!-- Pemilih Tema -->
+                <div class="flex items-center text-sm">
+                    <i class="fas fa-palette text-gray-400 mr-2 hidden md:inline"></i>
+                    <select id="themeSelector" onchange="changeTheme(this.value)" class="border-gray-300 border rounded-md py-1.5 px-2 text-sm focus:ring-brand-main focus:border-brand-main text-gray-600 bg-gray-50 outline-none cursor-pointer">
+                        <option value="green">Tema Hijau (Excel)</option>
+                        <option value="blue">Tema Biru (Word)</option>
+                        <option value="orange">Tema Oranye (PPT)</option>
+                        <option value="purple">Tema Ungu</option>
+                    </select>
+                </div>
+                
+                <!-- Tombol Admin -->
+                <button onclick="toggleView('admin')" id="navBtnAdmin" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                    <i class="fas fa-user-shield mr-2"></i> <span class="hidden md:inline">Menu Admin</span>
+                </button>
+                <button onclick="toggleView('main')" id="navBtnHome" class="hidden bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                    <i class="fas fa-home mr-2"></i> <span class="hidden md:inline">Beranda</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-4 md:p-6 mt-2">
         
-        <!-- Header -->
+        <!-- Header Utama -->
         <div class="text-center mb-8 flex flex-col items-center">
             <img src="RBE jpg.jpg" alt="Logo Rumah Belajar Excel" class="h-24 md:h-32 mb-4 object-contain">
-            <h1 class="text-3xl md:text-4xl font-bold text-green-700 mb-2">
+            <h1 class="text-3xl md:text-4xl font-bold text-brand-hover mb-2 transition-colors duration-300">
                 Rumah Belajar Excel
             </h1>
             <p class="text-gray-600 font-medium text-lg">Akses Member File Excel Bebas Tanpa Batas</p>
         </div>
 
-        <!-- Layout Utama: Sidebar (Kiri) & Konten (Kanan) -->
-        <div class="flex flex-col md:flex-row gap-6">
+        <!-- ============================================== -->
+        <!-- VIEW 1: APLIKASI UTAMA (PENCARIAN & TABEL FILE)-->
+        <!-- ============================================== -->
+        <div id="mainView" class="flex flex-col md:flex-row gap-6">
             
             <!-- Sidebar Kategori -->
-            <aside class="w-full md:w-1/4 bg-white rounded-lg shadow-md p-5 h-fit md:sticky md:top-6">
+            <aside class="w-full md:w-1/4 bg-white rounded-lg shadow-md p-5 h-fit md:sticky md:top-20">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
-                    <i class="fas fa-list text-green-600 mr-2"></i> Kategori
+                    <i class="fas fa-list text-brand-main mr-2"></i> Kategori
                 </h2>
                 
-                <!-- Loading indikator khusus sidebar -->
                 <div id="sidebarLoading" class="flex justify-center items-center py-4">
                     <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6"></div>
                 </div>
 
-                <!-- Daftar Kategori -->
-                <ul id="categoryList" class="space-y-2 max-h-64 md:max-h-96 overflow-y-auto custom-scrollbar pr-2 hidden">
-                    <!-- Default Menu: Root Folder -->
+                <ul id="categoryList" class="space-y-2 max-h-64 md:max-h-[70vh] overflow-y-auto custom-scrollbar pr-2 hidden">
                     <li>
-                        <button onclick="openFolder(ROOT_FOLDER_ID, 'Semua File', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 border border-green-200" id="btn-root">
+                        <button onclick="openFolder(ROOT_FOLDER_ID, 'Semua File', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border" id="btn-root">
                             <i class="fas fa-home mr-2 w-5 text-center"></i> Semua File
                         </button>
                     </li>
-                    <!-- Kategori (Folder) dari Drive akan dimuat di sini -->
                 </ul>
             </aside>
 
-            <!-- Panel Utama (Pencarian & Tabel) -->
+            <!-- Panel Utama -->
             <main class="w-full md:w-3/4 flex flex-col">
                 
-                <!-- Info Folder Saat Ini & Area Pencarian -->
                 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                     <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-2">
                         <h2 id="currentFolderName" class="text-xl font-bold text-gray-800 flex items-center">
                             <i class="fas fa-folder-open text-yellow-500 mr-2"></i> Semua File
                         </h2>
-                        <!-- Tombol Kembali (Disembunyikan jika di root) -->
-                        <button id="backBtn" onclick="openFolder(ROOT_FOLDER_ID, 'Semua File')" class="hidden text-sm text-green-600 hover:text-green-800 font-medium transition">
+                        <button id="backBtn" onclick="openFolder(ROOT_FOLDER_ID, 'Semua File')" class="hidden text-sm text-brand-main hover:text-brand-hover font-medium transition">
                             <i class="fas fa-arrow-left mr-1"></i> Kembali ke Awal
                         </button>
                     </div>
@@ -97,26 +166,22 @@
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-search text-gray-400"></i>
                             </div>
-                            <input type="text" id="searchInput" placeholder="Ketikkan nama file (misal: Laporan) di folder ini..." 
-                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition text-sm"
+                            <input type="text" id="searchInput" placeholder="Ketikkan nama file di folder ini..." 
+                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main focus:border-transparent transition text-sm"
                                 onkeypress="handleKeyPress(event)">
                         </div>
-                        <button onclick="triggerSearch()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0 text-sm">
+                        <button onclick="triggerSearch()" class="bg-brand-main hover:bg-brand-hover text-white font-bold py-3 px-6 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0 text-sm">
                             <i class="fas fa-search mr-1"></i> Cari
                         </button>
                     </div>
                 </div>
 
-                <!-- Pesan Error / Info -->
                 <div id="messageArea" class="hidden text-center py-4 px-6 mb-6 rounded-lg font-medium text-sm"></div>
 
-                <!-- Tabel Hasil -->
                 <div id="tableContainer" class="bg-white rounded-lg shadow-md overflow-hidden flex-grow relative min-h-[300px]">
-                    
-                    <!-- Loading Indikator Tabel -->
                     <div id="loadingIndicator" class="absolute inset-0 bg-white/80 z-10 hidden flex-col justify-center items-center">
                         <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-                        <p class="text-green-700 font-medium text-sm animate-pulse">Memuat data...</p>
+                        <p class="text-brand-hover font-medium text-sm animate-pulse">Memuat data...</p>
                     </div>
 
                     <div class="overflow-x-auto h-full">
@@ -129,11 +194,10 @@
                                 </tr>
                             </thead>
                             <tbody id="fileList" class="divide-y divide-gray-200">
-                                <!-- Data akan dimasukkan di sini melalui JS -->
+                                <!-- Data list -->
                             </tbody>
                         </table>
                         
-                        <!-- Area kosong jika data tidak ada -->
                         <div id="emptyState" class="hidden py-16 text-center">
                             <img src="https://cdn-icons-png.flaticon.com/512/7486/7486747.png" alt="Empty" class="w-24 h-24 mx-auto opacity-50 mb-4">
                             <h3 class="text-lg font-medium text-gray-600">Tidak ada file ditemukan</h3>
@@ -142,31 +206,191 @@
                     </div>
                 </div>
             </main>
-
         </div>
+
+        <!-- ============================================== -->
+        <!-- VIEW 2: ADMIN PANEL (AKTIVITAS UNDUHAN)        -->
+        <!-- ============================================== -->
+        <div id="adminView" class="hidden bg-white rounded-lg shadow-md p-6">
+            <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-chart-line text-brand-main mr-3"></i> Aktivitas Unduhan
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-1">Mencatat riwayat klik unduh file dari browser pengguna ini.</p>
+                </div>
+                <div class="mt-4 md:mt-0 bg-brand-light border border-brand-border text-brand-hover px-4 py-2 rounded-lg text-center shadow-sm">
+                    <span class="block text-xs font-bold uppercase tracking-wider">Total Unduhan</span>
+                    <span id="totalDownloads" class="text-2xl font-black">0</span>
+                </div>
+            </div>
+
+            <!-- Pesan Info Admin -->
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0"><i class="fas fa-info-circle text-blue-500"></i></div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            <strong>Catatan:</strong> Data ini disimpan secara lokal di browser (Local Storage) untuk simulasi. 
+                            Setiap sesi peramban diberikan ID unik otomatis. Untuk melacak pengunjung secara global dari perangkat yang berbeda, 
+                            aplikasi perlu dihubungkan dengan database backend (seperti Firebase/MySQL).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-700">Riwayat File Diunduh</h3>
+                <button onclick="clearAdminData()" class="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 py-1.5 px-3 rounded transition">
+                    <i class="fas fa-trash-alt mr-1"></i> Bersihkan Riwayat
+                </button>
+            </div>
+
+            <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full whitespace-nowrap min-w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th class="px-6 py-4">Waktu</th>
+                            <th class="px-6 py-4">ID Pengguna</th>
+                            <th class="px-6 py-4">Nama File</th>
+                            <th class="px-6 py-4 text-right">Ukuran</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody" class="divide-y divide-gray-200 bg-white">
+                        <!-- Data Admin -->
+                    </tbody>
+                </table>
+                <div id="adminEmptyState" class="hidden py-10 text-center text-gray-500 text-sm">
+                    Belum ada aktivitas unduhan yang tercatat.
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Script Utama -->
     <script>
-        // === KONFIGURASI ===
+        // === KONFIGURASI TEMA ===
+        function changeTheme(themeName) {
+            document.documentElement.setAttribute('data-theme', themeName);
+            localStorage.setItem('rbe_theme', themeName);
+        }
+
+        // Muat tema yang tersimpan
+        const savedTheme = localStorage.getItem('rbe_theme') || 'green';
+        document.getElementById('themeSelector').value = savedTheme;
+        changeTheme(savedTheme);
+
+        // === IDENTITAS USER SIMULASI ===
+        // Membuat ID unik per sesi browser untuk mensimulasikan 'user2'
+        let currentUserId = sessionStorage.getItem('rbe_session_user');
+        if (!currentUserId) {
+            // Menghasilkan ID Acak, misal: User-A1B2C
+            currentUserId = 'User-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+            sessionStorage.setItem('rbe_session_user', currentUserId);
+        }
+
+        // === NAVIGASI TAMPILAN ===
+        function toggleView(view) {
+            const mainView = document.getElementById('mainView');
+            const adminView = document.getElementById('adminView');
+            const navBtnAdmin = document.getElementById('navBtnAdmin');
+            const navBtnHome = document.getElementById('navBtnHome');
+
+            if (view === 'admin') {
+                mainView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+                navBtnAdmin.classList.add('hidden');
+                navBtnHome.classList.remove('hidden');
+                loadAdminData(); // Refresh tabel admin saat dibuka
+            } else {
+                adminView.classList.add('hidden');
+                mainView.classList.remove('hidden');
+                navBtnHome.classList.add('hidden');
+                navBtnAdmin.classList.remove('hidden');
+            }
+        }
+
+        // === FUNGSI ADMIN & TRACKING ===
+        function trackDownload(fileName, fileSize) {
+            // Ambil data yang sudah ada di localStorage, atau array kosong jika belum ada
+            let history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
+            
+            // Tambahkan data unduhan baru
+            history.unshift({ // unshift = taruh di paling atas
+                time: new Date().toISOString(),
+                user: currentUserId,
+                fileName: fileName,
+                size: fileSize
+            });
+            
+            // Simpan kembali
+            localStorage.setItem('rbe_downloads', JSON.stringify(history));
+        }
+
+        function loadAdminData() {
+            const history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
+            const tbody = document.getElementById('adminTableBody');
+            const emptyState = document.getElementById('adminEmptyState');
+            
+            document.getElementById('totalDownloads').innerText = history.length;
+            tbody.innerHTML = '';
+
+            if (history.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                
+                history.forEach(log => {
+                    const dateObj = new Date(log.time);
+                    const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                    const formattedTime = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="px-6 py-3 text-sm text-gray-500">
+                            <span class="font-medium text-gray-700">${formattedDate}</span><br>
+                            <span class="text-xs">${formattedTime} WIB</span>
+                        </td>
+                        <td class="px-6 py-3 text-sm">
+                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono border border-gray-200">
+                                <i class="fas fa-user text-gray-400 mr-1"></i> ${log.user}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-sm font-medium text-brand-hover truncate max-w-[200px] md:max-w-md" title="${log.fileName}">
+                            ${log.fileName}
+                        </td>
+                        <td class="px-6 py-3 text-sm text-gray-500 text-right">
+                            ${formatBytes(log.size)}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function clearAdminData() {
+            if(confirm("Apakah Anda yakin ingin menghapus seluruh riwayat unduhan di perangkat ini?")) {
+                localStorage.removeItem('rbe_downloads');
+                loadAdminData();
+            }
+        }
+
+        // === KONFIGURASI DRIVE API ===
         const API_KEY = 'AIzaSyCrm-_K9xGLqggF5zwklUdCVFrHgtCJX6Q';
         const ROOT_FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
-        
-        // State Aplikasi
         let currentFolderId = ROOT_FOLDER_ID;
 
-        // Inisialisasi saat halaman dimuat
         document.addEventListener('DOMContentLoaded', () => {
             loadSidebarCategories();
             loadFiles(ROOT_FOLDER_ID);
         });
 
-        // 1. Fungsi untuk memuat folder di root sebagai menu Sidebar (Kategori)
+        // 1. Memuat Kategori (Folder Root)
         async function loadSidebarCategories() {
             const ul = document.getElementById('categoryList');
             const loading = document.getElementById('sidebarLoading');
-            
-            // Query hanya mencari folder di dalam Root
             const query = `'${ROOT_FOLDER_ID}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
             
             try {
@@ -183,7 +407,7 @@
                     data.files.forEach(folder => {
                         const li = document.createElement('li');
                         li.innerHTML = `
-                            <button onclick="openFolder('${folder.id}', '${folder.name}', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-green-50 hover:text-green-600 transition-colors border border-transparent">
+                            <button onclick="openFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent">
                                 <i class="fas fa-folder text-yellow-400 mr-2 w-5 text-center"></i> ${folder.name}
                             </button>
                         `;
@@ -191,118 +415,92 @@
                     });
                 }
             } catch (err) {
-                console.error("Gagal memuat kategori sidebar:", err);
+                console.error("Gagal memuat kategori:", err);
             } finally {
                 loading.classList.add('hidden');
                 ul.classList.remove('hidden');
             }
         }
 
-        // 2. Fungsi untuk membuka folder (diklik dari sidebar atau dari tabel)
+        // 2. Membuka Folder
         function openFolder(folderId, folderName, btnElement = null) {
             currentFolderId = folderId;
-            
-            // Update UI Judul
             document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${folderName}`;
             
-            // Tampilkan / Sembunyikan tombol kembali
             const backBtn = document.getElementById('backBtn');
-            if (folderId !== ROOT_FOLDER_ID) {
-                backBtn.classList.remove('hidden');
-            } else {
-                backBtn.classList.add('hidden');
-            }
+            if (folderId !== ROOT_FOLDER_ID) backBtn.classList.remove('hidden');
+            else backBtn.classList.add('hidden');
 
-            // Bersihkan kolom pencarian saat pindah folder
             document.getElementById('searchInput').value = '';
 
-            // Update styling tombol sidebar yang aktif
             document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-green-50 hover:text-green-600 transition-colors border border-transparent';
+                btn.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent';
             });
             
-            // Jika tombol diklik langsung (dari sidebar), beri efek aktif
             if (btnElement) {
-                btnElement.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 border border-green-200';
+                btnElement.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border';
             } else if (folderId === ROOT_FOLDER_ID) {
-                // Jika kembali ke root via tombol 'Kembali', aktifkan tombol root
-                document.getElementById('btn-root').className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 border border-green-200';
+                document.getElementById('btn-root').className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border';
             }
 
-            // Muat isi folder
             loadFiles(currentFolderId);
         }
 
-        // 3. Handle pencarian
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') triggerSearch();
-        }
-
+        // 3. Pencarian
+        function handleKeyPress(e) { if (e.key === 'Enter') triggerSearch(); }
         function triggerSearch() {
             const keyword = document.getElementById('searchInput').value.trim();
             loadFiles(currentFolderId, keyword);
         }
 
-        // 4. Fungsi memuat file berdasarkan Folder ID dan kata kunci pencarian
+        // 4. Memuat File
         async function loadFiles(folderId, keyword = '') {
             showTableLoading(true);
             hideMessage();
             document.getElementById('emptyState').classList.add('hidden');
-            
             const tbody = document.getElementById('fileList');
             tbody.innerHTML = '';
 
-            // Query: Ambil file di dalam folder yang sedang aktif
             let query = `'${folderId}' in parents and trashed = false`;
-            
-            // Jika ada kata kunci, tambahkan filter nama
-            if (keyword) {
-                query += ` and name contains '${keyword}'`;
-            }
+            if (keyword) query += ` and name contains '${keyword}'`;
 
             try {
                 const url = new URL('https://www.googleapis.com/drive/v3/files');
                 url.searchParams.append('q', query);
                 url.searchParams.append('fields', 'files(id, name, mimeType, size, webViewLink, webContentLink)');
-                // Urutkan: Folder di atas, lalu berdasarkan nama
                 url.searchParams.append('orderBy', 'folder,name');
                 url.searchParams.append('key', API_KEY);
 
                 const response = await fetch(url);
                 const data = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(data.error?.message || 'Gagal mengambil data dari Google Drive');
-                }
+                if (!response.ok) throw new Error(data.error?.message || 'Gagal mengambil data');
 
                 const files = data.files;
-                
                 if (!files || files.length === 0) {
                     document.getElementById('emptyState').classList.remove('hidden');
                     return;
                 }
 
-                // Render tabel
                 files.forEach(file => {
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-gray-50 transition duration-150 border-b border-gray-100 last:border-0';
                     
                     const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
                     const downloadLink = file.webContentLink ? file.webContentLink : file.webViewLink;
+                    const safeFileName = file.name.replace(/'/g, "\\'"); // Menghindari error string pada onClick
                     
-                    // Kolom Aksi (Tombol)
                     let actionButton = '';
                     if (isFolder) {
-                        // Jika Folder: Ubah onClick agar membuka folder tersebut DI DALAM aplikasi
                         actionButton = `
-                            <button onclick="openFolder('${file.id}', '${file.name.replace(/'/g, "\\'")}')" class="inline-flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm border border-blue-200 hover:border-blue-600">
+                            <button onclick="openFolder('${file.id}', '${safeFileName}')" class="inline-flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm border border-blue-200 hover:border-blue-600">
                                 <i class="fas fa-folder-open mr-2 text-xs"></i> Buka Folder
                             </button>
                         `;
                     } else {
-                        // Jika File: Link untuk unduh
+                        // Tambahkan fungsi trackDownload() saat tombol di klik!
                         actionButton = `
-                            <a href="${downloadLink}" target="_blank" class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                            <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
                                 <i class="fas fa-download mr-2 text-xs"></i> Unduh File
                             </a>
                         `;
@@ -338,35 +536,25 @@
             }
         }
 
-        // --- Fungsi Bantuan (Helpers) ---
-
+        // --- Fungsi Bantuan ---
         function showTableLoading(show) {
             const loader = document.getElementById('loadingIndicator');
-            if (show) {
-                loader.classList.remove('hidden');
-                loader.classList.add('flex');
-            } else {
-                loader.classList.add('hidden');
-                loader.classList.remove('flex');
-            }
+            if (show) { loader.classList.remove('hidden'); loader.classList.add('flex'); } 
+            else { loader.classList.add('hidden'); loader.classList.remove('flex'); }
         }
 
         function showMessage(msg, type) {
             const msgArea = document.getElementById('messageArea');
             msgArea.innerHTML = msg;
-            msgArea.className = `text-center py-4 px-6 mb-4 rounded-lg font-medium block ${type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-600 border border-green-200'}`;
+            msgArea.className = `text-center py-4 px-6 mb-4 rounded-lg font-medium block ${type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-brand-light text-brand-main border border-brand-border'}`;
             msgArea.classList.remove('hidden');
         }
 
-        function hideMessage() {
-            document.getElementById('messageArea').classList.add('hidden');
-        }
+        function hideMessage() { document.getElementById('messageArea').classList.add('hidden'); }
 
         function formatBytes(bytes, decimals = 2) {
             if (!bytes || bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
@@ -374,9 +562,7 @@
         function getFileExtension(filename, isFolder) {
             if (isFolder) return 'Folder Data';
             const parts = filename.split('.');
-            if (parts.length > 1) {
-                return parts[parts.length - 1].toUpperCase() + ' File';
-            }
+            if (parts.length > 1) return parts[parts.length - 1].toUpperCase() + ' File';
             return 'File';
         }
 
@@ -386,14 +572,12 @@
             if (mimeType.includes('image')) return 'fas fa-file-image text-blue-400';
             if (mimeType.includes('pdf')) return 'fas fa-file-pdf text-red-500';
             if (mimeType.includes('word') || mimeType.includes('document')) return 'fas fa-file-word text-blue-600';
-            // Icon khusus untuk Excel karena ini Rumah Belajar Excel
             if (mimeType.includes('excel') || mimeType.includes('spreadsheet') || mimeType.includes('csv')) return 'fas fa-file-excel text-green-600';
             if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'fas fa-file-powerpoint text-orange-500';
             if (mimeType.includes('video')) return 'fas fa-file-video text-purple-500';
             if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('compressed')) return 'fas fa-file-archive text-gray-600';
             return 'fas fa-file-alt text-gray-500';
         }
-
     </script>
 </body>
 </html>
