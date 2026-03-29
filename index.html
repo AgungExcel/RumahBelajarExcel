@@ -5,12 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rumah Belajar Excel - Pencarian File</title>
     
-    <!-- Favicon otomatis mengambil dari file RBE jpg.jpg -->
-    <link rel="icon" type="image/jpeg" href="RBE jpg.jpg">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="rbe.png">
     
-    <!-- Menggunakan Tailwind CSS untuk styling -->
+    <!-- Menggunakan Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Library untuk Export Excel (SheetJS) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+    <!-- Library Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <!-- Konfigurasi Tema Dinamis Tailwind -->
     <script>
         tailwind.config = {
@@ -18,10 +24,10 @@
                 extend: {
                     colors: {
                         brand: {
-                            light: 'var(--brand-light)',
-                            border: 'var(--brand-border)',
-                            main: 'var(--brand-main)',
-                            hover: 'var(--brand-hover)',
+                            light: '#f0fdf4',  /* bg-green-50 */
+                            border: '#bbf7d0', /* border-green-200 */
+                            main: '#16a34a',   /* bg-green-600 */
+                            hover: '#15803d',  /* bg-green-700 */
                         }
                     }
                 }
@@ -33,38 +39,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Variabel Warna Tema (Default: Hijau Excel) */
-        :root {
-            --brand-light: #f0fdf4;  /* bg-green-50 */
-            --brand-border: #bbf7d0; /* border-green-200 */
-            --brand-main: #16a34a;   /* bg-green-600 */
-            --brand-hover: #15803d;  /* bg-green-700 */
-        }
-        /* Tema Biru (Word) */
-        [data-theme="blue"] {
-            --brand-light: #eff6ff;
-            --brand-border: #bfdbfe;
-            --brand-main: #2563eb;
-            --brand-hover: #1d4ed8;
-        }
-        /* Tema Oranye (PowerPoint) */
-        [data-theme="orange"] {
-            --brand-light: #fff7ed;
-            --brand-border: #fed7aa;
-            --brand-main: #ea580c;
-            --brand-hover: #c2410c;
-        }
-        /* Tema Ungu */
-        [data-theme="purple"] {
-            --brand-light: #f5f3ff;
-            --brand-border: #ddd6fe;
-            --brand-main: #7c3aed;
-            --brand-hover: #6d28d9;
-        }
-
         /* Animasi loading spinner */
         .loader {
-            border-top-color: var(--brand-main); 
+            border-top-color: #16a34a; 
             -webkit-animation: spinner 1.5s linear infinite;
             animation: spinner 1.5s linear infinite;
         }
@@ -86,21 +63,15 @@
     <nav class="bg-white shadow-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <img src="RBE jpg.jpg" alt="Logo" class="h-8 w-8 object-contain rounded-full border border-gray-200">
+                <img src="rbe.png" alt="Logo" class="h-8 w-8 object-contain rounded-full border border-gray-200 bg-white">
                 <span class="font-bold text-brand-hover hidden md:block">RBE App</span>
             </div>
             
-            <div class="flex items-center gap-3 md:gap-4">
-                <!-- Pemilih Tema -->
-                <div class="flex items-center text-sm">
-                    <i class="fas fa-palette text-gray-400 mr-2 hidden md:inline"></i>
-                    <select id="themeSelector" onchange="changeTheme(this.value)" class="border-gray-300 border rounded-md py-1.5 px-2 text-sm focus:ring-brand-main focus:border-brand-main text-gray-600 bg-gray-50 outline-none cursor-pointer">
-                        <option value="green">Tema Hijau (Excel)</option>
-                        <option value="blue">Tema Biru (Word)</option>
-                        <option value="orange">Tema Oranye (PPT)</option>
-                        <option value="purple">Tema Ungu</option>
-                    </select>
-                </div>
+            <div class="flex items-center gap-2 md:gap-4">
+                <!-- Tombol Bagikan Web -->
+                <button onclick="shareWeb()" class="text-gray-600 hover:text-brand-main font-medium py-1.5 px-3 rounded-md transition duration-200 text-sm flex items-center border border-transparent hover:bg-brand-light">
+                    <i class="fas fa-share-nodes mr-1 md:mr-2"></i> <span class="hidden md:inline">Bagikan Web</span>
+                </button>
                 
                 <!-- Tombol Admin -->
                 <button onclick="toggleView('admin')" id="navBtnAdmin" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
@@ -117,11 +88,14 @@
         
         <!-- Header Utama -->
         <div class="text-center mb-8 flex flex-col items-center">
-            <img src="RBE jpg.jpg" alt="Logo Rumah Belajar Excel" class="h-24 md:h-32 mb-4 object-contain">
-            <h1 class="text-3xl md:text-4xl font-bold text-brand-hover mb-2 transition-colors duration-300">
+            <img src="rbe.png" alt="Logo Rumah Belajar Excel" class="h-24 md:h-32 mb-4 object-contain">
+            <h1 class="text-3xl md:text-4xl font-bold text-brand-hover mb-2">
                 Rumah Belajar Excel
             </h1>
             <p class="text-gray-600 font-medium text-lg">Akses Member File Excel Bebas Tanpa Batas</p>
+            <span class="mt-3 inline-block bg-yellow-400 text-yellow-900 font-bold py-1 px-4 rounded-full text-sm shadow-sm border border-yellow-500 tracking-wide">
+                <i class="fas fa-star text-xs mr-1"></i> Belajar Excel Gak Nyesel
+            </span>
         </div>
 
         <!-- ============================================== -->
@@ -215,9 +189,9 @@
             <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-chart-line text-brand-main mr-3"></i> Aktivitas Unduhan
+                        <i class="fas fa-chart-line text-brand-main mr-3"></i> Log Aktivitas Unduhan
                     </h2>
-                    <p class="text-sm text-gray-500 mt-1">Mencatat riwayat klik unduh file dari browser pengguna ini.</p>
+                    <p class="text-sm text-gray-500 mt-1">Real-time tersambung ke Database Supabase.</p>
                 </div>
                 <div class="mt-4 md:mt-0 bg-brand-light border border-brand-border text-brand-hover px-4 py-2 rounded-lg text-center shadow-sm">
                     <span class="block text-xs font-bold uppercase tracking-wider">Total Unduhan</span>
@@ -225,28 +199,40 @@
                 </div>
             </div>
 
-            <!-- Pesan Info Admin -->
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
+            <!-- Pesan Peringatan Supabase -->
+            <div id="supabaseAlert" class="hidden bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded-r-lg">
                 <div class="flex">
-                    <div class="flex-shrink-0"><i class="fas fa-info-circle text-blue-500"></i></div>
+                    <div class="flex-shrink-0"><i class="fas fa-exclamation-triangle text-yellow-500"></i></div>
                     <div class="ml-3">
-                        <p class="text-sm text-blue-700">
-                            <strong>Catatan:</strong> Data ini disimpan secara lokal di browser (Local Storage) untuk simulasi. 
-                            Setiap sesi peramban diberikan ID unik otomatis. Untuk melacak pengunjung secara global dari perangkat yang berbeda, 
-                            aplikasi perlu dihubungkan dengan database backend (seperti Firebase/MySQL).
+                        <p class="text-sm text-yellow-700">
+                            <strong>Perhatian:</strong> Kredensial Supabase belum diisi. Untuk sementara log unduhan hanya disimpan di perangkat ini (Local Storage).
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
                 <h3 class="font-bold text-gray-700">Riwayat File Diunduh</h3>
-                <button onclick="clearAdminData()" class="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 py-1.5 px-3 rounded transition">
-                    <i class="fas fa-trash-alt mr-1"></i> Bersihkan Riwayat
-                </button>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="changeAdminPassword()" class="text-xs text-blue-600 hover:text-white border border-blue-600 hover:bg-blue-600 py-1.5 px-3 rounded transition flex items-center">
+                        <i class="fas fa-key mr-1"></i> Ganti Password
+                    </button>
+                    <button onclick="downloadExcelLog()" class="text-xs text-green-600 hover:text-white border border-green-600 hover:bg-green-600 py-1.5 px-3 rounded transition flex items-center">
+                        <i class="fas fa-file-excel mr-1"></i> Unduh Excel (.xlsx)
+                    </button>
+                    <button onclick="clearAdminData()" class="text-xs text-red-600 hover:text-white border border-red-600 hover:bg-red-600 py-1.5 px-3 rounded transition flex items-center">
+                        <i class="fas fa-trash-alt mr-1"></i> Reset Log Data
+                    </button>
+                </div>
             </div>
 
-            <div class="overflow-x-auto border rounded-lg">
+            <div class="overflow-x-auto border rounded-lg relative">
+                <!-- Loading Admin Table -->
+                <div id="adminLoadingIndicator" class="absolute inset-0 bg-white/90 z-10 hidden flex-col justify-center items-center">
+                    <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mb-2"></div>
+                    <p class="text-brand-hover font-medium text-xs">Memuat Log Supabase...</p>
+                </div>
+
                 <table class="w-full whitespace-nowrap min-w-full">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -270,39 +256,91 @@
 
     <!-- Script Utama -->
     <script>
-        // === KONFIGURASI TEMA ===
-        function changeTheme(themeName) {
-            document.documentElement.setAttribute('data-theme', themeName);
-            localStorage.setItem('rbe_theme', themeName);
+        // ==========================================
+        // KONFIGURASI SUPABASE DATABASE (REALTIME)
+        // ==========================================
+        // Ganti URL dan KEY di bawah ini dengan project Supabase milik Anda
+        const SUPABASE_URL = 'URL_PROJECT_SUPABASE_ANDA_DISINI'; 
+        const SUPABASE_KEY = 'KUNCI_ANON_SUPABASE_ANDA_DISINI';
+        
+        // Buat tabel di Supabase SQL Editor dengan perintah berikut:
+        /*
+            CREATE TABLE log_unduhan (
+                id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                waktu TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+                id_pengguna TEXT,
+                nama_file TEXT,
+                ukuran_file BIGINT
+            );
+            -- Jangan lupa matikan RLS (Row Level Security) untuk tabel ini agar bisa di-insert publik
+        */
+
+        let supabaseClient = null;
+        let isSupabaseActive = false;
+
+        if(SUPABASE_URL !== 'URL_PROJECT_SUPABASE_ANDA_DISINI') {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            isSupabaseActive = true;
         }
 
-        // Muat tema yang tersimpan
-        const savedTheme = localStorage.getItem('rbe_theme') || 'green';
-        document.getElementById('themeSelector').value = savedTheme;
-        changeTheme(savedTheme);
-
         // === IDENTITAS USER SIMULASI ===
-        // Membuat ID unik per sesi browser untuk mensimulasikan 'user2'
         let currentUserId = sessionStorage.getItem('rbe_session_user');
         if (!currentUserId) {
-            // Menghasilkan ID Acak, misal: User-A1B2C
             currentUserId = 'User-' + Math.random().toString(36).substr(2, 5).toUpperCase();
             sessionStorage.setItem('rbe_session_user', currentUserId);
         }
 
-        // === NAVIGASI TAMPILAN ===
+        // === FUNGSI BAGIKAN WEB & FILE ===
+        function shareWeb() {
+            const currentUrl = window.location.href;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Rumah Belajar Excel',
+                    text: 'Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.',
+                    url: currentUrl,
+                }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(currentUrl);
+                alert("Link aplikasi berhasil disalin ke clipboard!");
+            }
+        }
+
+        function shareFile(link, fileName) {
+            if (navigator.share) {
+                navigator.share({
+                    title: fileName,
+                    text: `Unduh file Excel ini: ${fileName}`,
+                    url: link,
+                }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(link);
+                alert(`Link file "${fileName}" berhasil disalin ke clipboard!`);
+            }
+        }
+
+        // === FUNGSI PASSWORD ADMIN ===
         function toggleView(view) {
             const mainView = document.getElementById('mainView');
             const adminView = document.getElementById('adminView');
             const navBtnAdmin = document.getElementById('navBtnAdmin');
             const navBtnHome = document.getElementById('navBtnHome');
 
+            if (!isSupabaseActive) document.getElementById('supabaseAlert').classList.remove('hidden');
+
             if (view === 'admin') {
-                mainView.classList.add('hidden');
-                adminView.classList.remove('hidden');
-                navBtnAdmin.classList.add('hidden');
-                navBtnHome.classList.remove('hidden');
-                loadAdminData(); // Refresh tabel admin saat dibuka
+                const savedPwd = localStorage.getItem('rbe_admin_pwd') || 'AGUNG';
+                const inputPwd = prompt("Masukkan Password Admin:");
+                
+                if (inputPwd === null) return; 
+                if (inputPwd === savedPwd) {
+                    mainView.classList.add('hidden');
+                    adminView.classList.remove('hidden');
+                    navBtnAdmin.classList.add('hidden');
+                    navBtnHome.classList.remove('hidden');
+                    loadAdminData(); 
+                } else {
+                    alert("Password yang Anda masukkan SALAH!");
+                }
             } else {
                 adminView.classList.add('hidden');
                 mainView.classList.remove('hidden');
@@ -311,36 +349,85 @@
             }
         }
 
-        // === FUNGSI ADMIN & TRACKING ===
-        function trackDownload(fileName, fileSize) {
-            // Ambil data yang sudah ada di localStorage, atau array kosong jika belum ada
-            let history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
+        function changeAdminPassword() {
+            const savedPwd = localStorage.getItem('rbe_admin_pwd') || 'AGUNG';
+            const oldPwd = prompt("Masukkan Password LAMA:");
             
-            // Tambahkan data unduhan baru
-            history.unshift({ // unshift = taruh di paling atas
-                time: new Date().toISOString(),
-                user: currentUserId,
-                fileName: fileName,
-                size: fileSize
-            });
-            
-            // Simpan kembali
-            localStorage.setItem('rbe_downloads', JSON.stringify(history));
+            if (oldPwd === null) return;
+            if (oldPwd === savedPwd) {
+                const newPwd = prompt("Masukkan Password BARU:");
+                if (newPwd && newPwd.trim() !== '') {
+                    localStorage.setItem('rbe_admin_pwd', newPwd);
+                    alert("Password berhasil diubah!");
+                } else {
+                    alert("Password baru tidak boleh kosong.");
+                }
+            } else {
+                alert("Password LAMA yang Anda masukkan salah!");
+            }
         }
 
-        function loadAdminData() {
-            const history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
+        // === FUNGSI ADMIN & TRACKING (SUPABASE / LOCAL) ===
+        async function trackDownload(fileName, fileSize) {
+            if (isSupabaseActive) {
+                // Simpan ke Supabase
+                try {
+                    await supabaseClient.from('log_unduhan').insert([
+                        { id_pengguna: currentUserId, nama_file: fileName, ukuran_file: fileSize }
+                    ]);
+                } catch(e) { console.error("Error Supabase:", e); }
+            } else {
+                // Fallback LocalStorage jika Supabase belum diset
+                let history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
+                history.unshift({ time: new Date().toISOString(), user: currentUserId, fileName: fileName, size: fileSize });
+                localStorage.setItem('rbe_downloads', JSON.stringify(history));
+            }
+        }
+
+        async function loadAdminData() {
             const tbody = document.getElementById('adminTableBody');
             const emptyState = document.getElementById('adminEmptyState');
+            const loading = document.getElementById('adminLoadingIndicator');
+            
+            tbody.innerHTML = '';
+            loading.classList.remove('hidden');
+            loading.classList.add('flex');
+
+            let history = [];
+
+            if (isSupabaseActive) {
+                // Ambil data dari Supabase
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('log_unduhan')
+                        .select('*')
+                        .order('waktu', { ascending: false });
+                    if(data) {
+                        // Ubah format data supabase agar cocok dengan fungsi render
+                        history = data.map(d => ({
+                            time: d.waktu,
+                            user: d.id_pengguna,
+                            fileName: d.nama_file,
+                            size: d.ukuran_file
+                        }));
+                    }
+                } catch(e) { console.error("Error Load Supabase:", e); }
+            } else {
+                history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
+            }
+
+            loading.classList.add('hidden');
+            loading.classList.remove('flex');
             
             document.getElementById('totalDownloads').innerText = history.length;
-            tbody.innerHTML = '';
+            
+            // Simpan array di global untuk fungsi export Excel
+            window.currentLogData = history;
 
             if (history.length === 0) {
                 emptyState.classList.remove('hidden');
             } else {
                 emptyState.classList.add('hidden');
-                
                 history.forEach(log => {
                     const dateObj = new Date(log.time);
                     const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -370,24 +457,63 @@
             }
         }
 
-        function clearAdminData() {
-            if(confirm("Apakah Anda yakin ingin menghapus seluruh riwayat unduhan di perangkat ini?")) {
-                localStorage.removeItem('rbe_downloads');
+        async function clearAdminData() {
+            if(confirm("PERINGATAN! Anda yakin ingin menghapus seluruh log unduhan?\nData yang dihapus tidak dapat dikembalikan.")) {
+                if(isSupabaseActive) {
+                    try {
+                        // Supabase tidak mengizinkan delete() tanpa filter. Kita akali dengan delete jika id tidak null
+                        await supabaseClient.from('log_unduhan').delete().not('id', 'is', null);
+                    } catch(e) { console.error("Error Reset Supabase:", e); }
+                } else {
+                    localStorage.removeItem('rbe_downloads');
+                }
                 loadAdminData();
             }
         }
 
+        // === FUNGSI UNDUH EXCEL (.XLSX) ===
+        function downloadExcelLog() {
+            if(!window.currentLogData || window.currentLogData.length === 0) {
+                alert("Tidak ada data untuk diunduh!");
+                return;
+            }
+            
+            // Format ulang data JSON menjadi susunan kolom excel
+            const excelData = window.currentLogData.map(log => {
+                const d = new Date(log.time);
+                return {
+                    "Tanggal": d.toLocaleDateString('id-ID'),
+                    "Waktu (WIB)": d.toLocaleTimeString('id-ID'),
+                    "ID Pengguna": log.user,
+                    "Nama File": log.fileName,
+                    "Ukuran (Bytes)": log.size,
+                    "Ukuran": formatBytes(log.size)
+                }
+            });
+
+            // Konversi ke worksheet
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Log Unduhan");
+            
+            // Trigger download file
+            XLSX.writeFile(workbook, "Log_Unduhan_RBE.xlsx");
+        }
+
+
         // === KONFIGURASI DRIVE API ===
         const API_KEY = 'AIzaSyCrm-_K9xGLqggF5zwklUdCVFrHgtCJX6Q';
         const ROOT_FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
+        
         let currentFolderId = ROOT_FOLDER_ID;
+        let subFolderIds = []; 
 
         document.addEventListener('DOMContentLoaded', () => {
             loadSidebarCategories();
             loadFiles(ROOT_FOLDER_ID);
         });
 
-        // 1. Memuat Kategori (Folder Root)
+        // 1. Memuat Kategori (Folder Root) & Simpan ID Kategori
         async function loadSidebarCategories() {
             const ul = document.getElementById('categoryList');
             const loading = document.getElementById('sidebarLoading');
@@ -405,6 +531,8 @@
 
                 if (response.ok && data.files && data.files.length > 0) {
                     data.files.forEach(folder => {
+                        subFolderIds.push(folder.id); 
+                        
                         const li = document.createElement('li');
                         li.innerHTML = `
                             <button onclick="openFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent">
@@ -461,8 +589,16 @@
             const tbody = document.getElementById('fileList');
             tbody.innerHTML = '';
 
-            let query = `'${folderId}' in parents and trashed = false`;
-            if (keyword) query += ` and name contains '${keyword}'`;
+            let query = '';
+            
+            if (folderId === ROOT_FOLDER_ID && keyword !== '') {
+                let parentQueries = [`'${ROOT_FOLDER_ID}' in parents`];
+                subFolderIds.forEach(id => parentQueries.push(`'${id}' in parents`));
+                query = `(${parentQueries.join(' or ')}) and name contains '${keyword}' and trashed = false`;
+            } else {
+                query = `'${folderId}' in parents and trashed = false`;
+                if (keyword) query += ` and name contains '${keyword}'`;
+            }
 
             try {
                 const url = new URL('https://www.googleapis.com/drive/v3/files');
@@ -488,7 +624,7 @@
                     
                     const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
                     const downloadLink = file.webContentLink ? file.webContentLink : file.webViewLink;
-                    const safeFileName = file.name.replace(/'/g, "\\'"); // Menghindari error string pada onClick
+                    const safeFileName = file.name.replace(/'/g, "\\'"); 
                     
                     let actionButton = '';
                     if (isFolder) {
@@ -498,11 +634,16 @@
                             </button>
                         `;
                     } else {
-                        // Tambahkan fungsi trackDownload() saat tombol di klik!
+                        // Tambahan tombol SHARE di sebelah tombol UNDUH
                         actionButton = `
-                            <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
-                                <i class="fas fa-download mr-2 text-xs"></i> Unduh File
-                            </a>
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
+                                    <i class="fas fa-share-nodes"></i>
+                                </button>
+                                <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                    <i class="fas fa-download mr-2 text-xs"></i> Unduh File
+                                </a>
+                            </div>
                         `;
                     }
                     
