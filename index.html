@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencarian File Google Drive</title>
+    <!-- Menggunakan Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome untuk Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Animasi loading spinner */
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <div class="max-w-5xl mx-auto p-6 mt-10">
+        
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                <i class="fab fa-google-drive text-blue-600 mr-2"></i> Drive File Explorer
+            </h1>
+            <p class="text-gray-600">Cari dan unduh file langsung dari folder Google Drive</p>
+        </div>
+
+        <!-- Panel Otorisasi -->
+        <div id="authPanel" class="bg-white rounded-lg shadow-md p-8 text-center max-w-md mx-auto">
+            <i class="fas fa-lock text-5xl text-gray-400 mb-4"></i>
+            <h2 class="text-xl font-semibold mb-4">Akses Diperlukan</h2>
+            <p class="text-sm text-gray-600 mb-6">Silakan masuk dengan akun Google Anda untuk memberikan izin membaca file dari folder ini.</p>
+            <button id="authorize_button" onclick="handleAuthClick()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition duration-300 w-full flex items-center justify-center invisible">
+                <i class="fab fa-google mr-2"></i> Otorisasi & Masuk
+            </button>
+        </div>
+
+        <!-- Panel Pencarian & Hasil (Disembunyikan sebelum login) -->
+        <div id="appPanel" class="hidden">
+            
+            <!-- Area Pencarian -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8 flex flex-col md:flex-row gap-4 items-center">
+                <div class="relative flex-grow w-full">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="searchInput" placeholder="Ketikkan nama file yang dicari..." 
+                        class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        onkeypress="handleKeyPress(event)">
+                </div>
+                <button onclick="searchFiles()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0">
+                    Cari File
+                </button>
+                <button onclick="handleSignoutClick()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0" title="Keluar">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+
+            <!-- Loading Indikator -->
+            <div id="loadingIndicator" class="hidden flex justify-center items-center py-10">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+            </div>
+
+            <!-- Pesan Error / Info -->
+            <div id="messageArea" class="hidden text-center py-4 px-6 mb-6 rounded-lg font-medium"></div>
+
+            <!-- Tabel Hasil -->
+            <div id="tableContainer" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full whitespace-nowrap">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <th class="px-6 py-4">Nama File</th>
+                                <th class="px-6 py-4 text-center">Ukuran</th>
+                                <th class="px-6 py-4 text-center">Tipe</th>
+                                <th class="px-6 py-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileList" class="divide-y divide-gray-200">
+                            <!-- Data akan dimasukkan di sini melalui JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Google API -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
+    <script>
+        // === KONFIGURASI DARI PENGGUNA ===
+        const CLIENT_ID = '821451425294-p4m2q73cglnnkds7kp2hdooj2u7r38c1.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyCrm-_K9xGLqggF5zwklUdCVFrHgtCJX6Q';
+        const FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
+        
+        // Scope yang dibutuhkan untuk membaca file
+        const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        // Callback saat GAPI (Google API) dimuat
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        // Inisialisasi GAPI Client
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: [DISCOVERY_DOC],
+                });
+                gapiInited = true;
+                maybeEnableButtons();
+            } catch (err) {
+                showError('Gagal menginisialisasi Google API: ' + JSON.stringify(err));
+            }
+        }
+
+        // Callback saat GIS (Google Identity Services) dimuat
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: '', // didefinisikan nanti saat tombol diklik
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+
+        // Aktifkan tombol otorisasi jika kedua library sudah siap
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('authorize_button').classList.remove('invisible');
+            }
+        }
+
+        // Handle klik tombol otorisasi
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw (resp);
+                }
+                // Jika sukses login
+                document.getElementById('authPanel').classList.add('hidden');
+                document.getElementById('appPanel').classList.remove('hidden');
+                
+                // Langsung tampilkan semua file saat pertama kali masuk
+                await searchFiles(''); 
+            };
+
+            if (gapi.client.getToken() === null) {
+                // Meminta token untuk pertama kali
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                // Skip otorisasi jika sudah ada token
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+
+        // Handle Sign Out
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                
+                // Reset UI
+                document.getElementById('appPanel').classList.add('hidden');
+                document.getElementById('authPanel').classList.remove('hidden');
+                document.getElementById('tableContainer').classList.add('hidden');
+                document.getElementById('searchInput').value = '';
+            }
+        }
+
+        // Handle pencarian dengan tombol Enter
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                searchFiles();
+            }
+        }
+
+        // Fungsi utama untuk mencari file
+        async function searchFiles(keywordOverride = null) {
+            const keyword = keywordOverride !== null ? keywordOverride : document.getElementById('searchInput').value.trim();
+            
+            // Query: Cari di dalam FOLDER_ID, jangan tampilkan file di tempat sampah
+            let query = `'${FOLDER_ID}' in parents and trashed = false`;
+            
+            // Jika ada kata kunci, tambahkan ke query
+            if (keyword) {
+                // Mencari kata kunci pada nama file
+                query += ` and name contains '${keyword}'`;
+            }
+
+            showLoading(true);
+            hideMessage();
+            document.getElementById('tableContainer').classList.add('hidden');
+            const tbody = document.getElementById('fileList');
+            tbody.innerHTML = '';
+
+            try {
+                const response = await gapi.client.drive.files.list({
+                    q: query,
+                    fields: 'files(id, name, mimeType, size, webViewLink, webContentLink)',
+                    spaces: 'drive',
+                    orderBy: 'name'
+                });
+
+                const files = response.result.files;
+                
+                if (!files || files.length === 0) {
+                    showMessage('Tidak ada file yang ditemukan dengan kata kunci tersebut.', 'info');
+                    return;
+                }
+
+                // Render tabel
+                files.forEach(file => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50 transition duration-150';
+                    
+                    // Mendapatkan link download (webContentLink untuk download langsung, webViewLink sebagai fallback/folder)
+                    const downloadLink = file.webContentLink ? file.webContentLink : file.webViewLink;
+                    const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+                    
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 flex items-center">
+                            <i class="${getFileIcon(file.mimeType)} text-xl mr-3 w-6 text-center"></i>
+                            <span class="font-medium text-gray-800 truncate max-w-xs md:max-w-md" title="${file.name}">${file.name}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center text-sm text-gray-500">
+                            ${isFolder ? '-' : formatBytes(file.size)}
+                        </td>
+                        <td class="px-6 py-4 text-center text-sm text-gray-500">
+                            ${getFileExtension(file.name, isFolder)}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <a href="${downloadLink}" target="_blank" class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded shadow-sm transition duration-200">
+                                <i class="fas ${isFolder ? 'fa-external-link-alt' : 'fa-download'} mr-2 text-sm"></i>
+                                ${isFolder ? 'Buka' : 'Unduh'}
+                            </a>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('tableContainer').classList.remove('hidden');
+
+            } catch (err) {
+                console.error(err);
+                if (err.status === 404) {
+                    showMessage('Folder tidak ditemukan atau Anda tidak memiliki akses ke folder tersebut.', 'error');
+                } else if (err.status === 401) {
+                    showMessage('Sesi Anda telah habis. Silakan keluar dan otorisasi ulang.', 'error');
+                } else {
+                    showMessage('Terjadi kesalahan saat mengambil data file: ' + (err.message || 'Unknown Error'), 'error');
+                }
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- Fungsi Bantuan (Helpers) ---
+
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'flex' : 'none';
+        }
+
+        function showMessage(msg, type) {
+            const msgArea = document.getElementById('messageArea');
+            msgArea.innerHTML = msg;
+            msgArea.className = `text-center py-4 px-6 mb-6 rounded-lg font-medium block ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
+            msgArea.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('messageArea').style.display = 'none';
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!bytes || bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        function getFileExtension(filename, isFolder) {
+            if (isFolder) return 'Folder';
+            const parts = filename.split('.');
+            if (parts.length > 1) {
+                return parts[parts.length - 1].toUpperCase();
+            }
+            return 'File';
+        }
+
+        function getFileIcon(mimeType) {
+            if (!mimeType) return 'fas fa-file text-gray-400';
+            if (mimeType.includes('folder')) return 'fas fa-folder text-yellow-400';
+            if (mimeType.includes('image')) return 'fas fa-file-image text-blue-400';
+            if (mimeType.includes('pdf')) return 'fas fa-file-pdf text-red-500';
+            if (mimeType.includes('word')) return 'fas fa-file-word text-blue-600';
+            if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'fas fa-file-excel text-green-600';
+            if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'fas fa-file-powerpoint text-orange-500';
+            if (mimeType.includes('video')) return 'fas fa-file-video text-purple-500';
+            if (mimeType.includes('audio')) return 'fas fa-file-audio text-pink-500';
+            if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('compressed')) return 'fas fa-file-archive text-gray-600';
+            return 'fas fa-file text-gray-400';
+        }
+
+    </script>
+</body>
+</html>
