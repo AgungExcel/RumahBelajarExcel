@@ -72,7 +72,7 @@
     <!-- Top Navigation Bar -->
     <nav class="bg-white shadow-sm sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition" onclick="openFolder(ROOT_FOLDER_ID, 'Semua File'); toggleView('main');">
+            <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition" onclick="openFolder(ROOT_FOLDER_ID, 'Semua File'); goHome();">
                 <img src="rbe.png" alt="Logo" class="h-8 w-8 object-contain">
                 <span class="font-bold text-brand-hover hidden md:block">Rumah Belajar Excel</span>
             </div>
@@ -82,7 +82,7 @@
                 <!-- Indikator User Online -->
                 <div class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 shadow-sm" title="Pengguna Sedang Aktif">
                     <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span id="onlineCount" class="text-xs font-bold text-green-700">1 Online</span>
+                    <span id="onlineCount" class="text-xs font-bold text-green-700 hidden sm:inline">1 Online</span>
                 </div>
 
                 <button onclick="shareWeb()" class="text-gray-600 hover:text-brand-main font-medium py-1.5 px-2 md:px-3 rounded-md transition duration-200 text-sm flex items-center border border-transparent hover:bg-brand-light hidden sm:flex">
@@ -98,17 +98,42 @@
                 
                 <button onclick="toggleView('admin')" id="navBtnAdmin" class="relative bg-gray-800 hover:bg-gray-900 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                     <i class="fas fa-user-shield mr-2"></i> <span class="hidden md:inline">Admin</span>
-                    <!-- Badge Notifikasi Admin -->
-                    <span id="adminNotifBadge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">0</span>
                 </button>
-                <button onclick="toggleView('main')" id="navBtnHome" class="hidden bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                <button onclick="goHome()" id="navBtnHome" class="hidden bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                     <i class="fas fa-home mr-2"></i> <span class="hidden md:inline">Beranda</span>
                 </button>
             </div>
         </div>
     </nav>
 
-    <!-- Modal Login / Daftar -->
+    <!-- Modal Login Admin Elegan -->
+    <div id="adminAuthModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all">
+            <div class="bg-gray-900 p-6 text-center">
+                <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-gray-700 shadow-inner">
+                    <i class="fas fa-user-shield text-3xl text-yellow-500"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-white tracking-wide">Otorisasi Admin</h3>
+                <p class="text-gray-400 text-sm mt-1">Sistem ini dilindungi enkripsi</p>
+            </div>
+            <div class="p-6 bg-gray-50">
+                <div class="relative mb-6">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-key text-gray-400"></i>
+                    </div>
+                    <input type="password" id="adminPwdInput" placeholder="Masukkan Password" class="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-800 transition bg-white text-center tracking-widest text-lg font-bold shadow-sm" onkeypress="if(event.key === 'Enter') submitAdminPassword()">
+                </div>
+                <button onclick="submitAdminPassword()" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center">
+                    <i class="fas fa-unlock-alt mr-2"></i> Buka Panel Admin
+                </button>
+                <button onclick="closeAdminAuthModal()" class="w-full mt-3 bg-white hover:bg-gray-100 text-gray-600 font-bold py-2.5 px-4 rounded-xl border border-gray-200 transition duration-200 shadow-sm">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Login / Daftar Member -->
     <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div class="flex border-b">
@@ -125,14 +150,14 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-user text-gray-400"></i>
                         </div>
-                        <input type="text" id="loginUsername" placeholder="Username" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white">
+                        <input type="text" id="loginUsername" placeholder="Username" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white" onkeypress="if(event.key === 'Enter') processLogin()">
                     </div>
                     
                     <div class="relative mb-4">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-lock text-gray-400"></i>
                         </div>
-                        <input type="password" id="loginPassword" placeholder="Password (4 Angka Terakhir No HP)" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white" maxlength="4">
+                        <input type="password" id="loginPassword" placeholder="Password (4 Angka Terakhir No HP)" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main transition bg-gray-50 focus:bg-white" maxlength="4" onkeypress="if(event.key === 'Enter') processLogin()">
                     </div>
                     
                     <div class="flex items-center mb-6">
@@ -217,7 +242,7 @@
                         <span class="text-sm">Terdapat <strong id="adminNotifCount" class="text-lg">0</strong> pendaftar baru yang menunggu persetujuan!</span>
                     </div>
                 </div>
-                <button onclick="toggleView('admin')" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-md text-sm font-bold shadow-sm transition whitespace-nowrap w-full sm:w-auto">
+                <button onclick="toggleView('admin', 'members')" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-md text-sm font-bold shadow-sm transition whitespace-nowrap w-full sm:w-auto">
                     <i class="fas fa-user-shield mr-2"></i> Tinjau Sekarang
                 </button>
             </div>
@@ -454,7 +479,7 @@
         }
 
         // ==========================================
-        // INDIKATOR PENGGUNA ONLINE (PRESENCE) & NOTIFIKASI PENDAFTARAN
+        // INDIKATOR PENGGUNA ONLINE & NOTIFIKASI
         // ==========================================
         const presenceChannel = supabaseClient.channel('online-users');
 
@@ -481,7 +506,6 @@
             }
         }
 
-        // Realtime Listener untuk Notifikasi Admin
         if (isSupabaseActive) {
             const usersChannel = supabaseClient.channel('users-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'users_rbe' }, payload => {
@@ -503,22 +527,24 @@
         }
 
         function updateAdminNotification(count) {
-            const badge = document.getElementById('adminNotifBadge');
+            const adminBadge = document.getElementById('adminNotifBadge');
             const banner = document.getElementById('adminNotifBanner');
             const countText = document.getElementById('adminNotifCount');
             
             if (count > 0) {
-                if(badge) {
-                    badge.innerText = count;
-                    badge.classList.remove('hidden');
+                // Tampilkan angka di tombol Admin
+                if(adminBadge) {
+                    adminBadge.innerText = count;
+                    adminBadge.classList.remove('hidden');
                 }
+                // Tampilkan banner
                 if(banner) {
                     countText.innerText = count;
                     banner.classList.remove('hidden');
                     banner.classList.add('flex');
                 }
             } else {
-                if(badge) badge.classList.add('hidden');
+                if(adminBadge) adminBadge.classList.add('hidden');
                 if(banner) {
                     banner.classList.add('hidden');
                     banner.classList.remove('flex');
@@ -547,17 +573,11 @@
             }
         }
         
-        // --- Verifikasi Sesi & Inisialisasi Aplikasi ---
         async function initApp() {
             updateAuthUI();
             checkPendingRegistrations();
-            
-            // Fallback: Cek notifikasi pendaftar baru setiap 15 detik 
-            // (Berfungsi otomatis meskipun fitur Realtime Supabase di-dashboard belum dihidupkan)
             setInterval(checkPendingRegistrations, 15000); 
 
-            // Verifikasi ketat: Cek DB apakah user masih benar-benar berstatus 'approved'
-            // Mencegah error dimana user yang sudah ditolak/dihapus masih nyangkut di cache browser (localStorage)
             if (loggedInMember && isSupabaseActive) {
                 try {
                     const { data } = await supabaseClient
@@ -580,7 +600,6 @@
                 } catch(e) { console.error("Gagal verifikasi:", e); }
             }
 
-            // Memulai muat file dari Google Drive setelah sesi dipastikan aman
             loadSidebarCategories();
             loadFiles(ROOT_FOLDER_ID);
         }
@@ -588,6 +607,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             initApp();
         });
+
+        function goHome() {
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('mainView').classList.remove('hidden');
+            document.getElementById('navBtnHome').classList.add('hidden');
+            document.getElementById('navBtnAdmin').classList.remove('hidden');
+        }
 
         function openAuthModal() {
             document.getElementById('authModal').classList.remove('hidden');
@@ -662,7 +688,7 @@
                 document.getElementById('regUsername').value = '';
                 document.getElementById('regPassword').value = '';
                 
-                checkPendingRegistrations(); // Perbarui notifikasi secara manual untuk jaga-jaga
+                checkPendingRegistrations(); 
 
             } catch (err) {
                 console.error("Error Register:", err);
@@ -770,33 +796,43 @@
             }
         }
 
-        // === FUNGSI MENU ADMIN (MULTI-TAB) ===
-        function toggleView(view) {
+        // === FUNGSI MENU ADMIN (CUSTOM MODAL) ===
+        let pendingAdminViewTab = 'members';
+
+        function toggleView(view, tab = 'members') {
             const mainView = document.getElementById('mainView');
             const adminView = document.getElementById('adminView');
             const navBtnAdmin = document.getElementById('navBtnAdmin');
             const navBtnHome = document.getElementById('navBtnHome');
 
             if (view === 'admin') {
-                const savedPwd = localStorage.getItem('rbe_admin_pwd') || 'AGUNG';
-                const inputPwd = prompt("Masukkan Password Admin:");
-                
-                if (inputPwd === null) return; 
-                if (inputPwd === savedPwd) {
-                    mainView.classList.add('hidden');
-                    adminView.classList.remove('hidden');
-                    navBtnAdmin.classList.add('hidden');
-                    navBtnHome.classList.remove('hidden');
-                    
-                    switchAdminTab('members');
-                } else {
-                    alert("Password yang Anda masukkan SALAH!");
-                }
+                pendingAdminViewTab = tab;
+                document.getElementById('adminPwdInput').value = '';
+                document.getElementById('adminAuthModal').classList.remove('hidden');
             } else {
-                adminView.classList.add('hidden');
-                mainView.classList.remove('hidden');
-                navBtnHome.classList.add('hidden');
-                navBtnAdmin.classList.remove('hidden');
+                goHome();
+            }
+        }
+
+        function closeAdminAuthModal() {
+            document.getElementById('adminAuthModal').classList.add('hidden');
+        }
+
+        function submitAdminPassword() {
+            const savedPwd = localStorage.getItem('rbe_admin_pwd') || 'AGUNG';
+            const inputPwd = document.getElementById('adminPwdInput').value;
+
+            if (inputPwd === savedPwd) {
+                closeAdminAuthModal();
+                document.getElementById('mainView').classList.add('hidden');
+                document.getElementById('adminView').classList.remove('hidden');
+                document.getElementById('navBtnAdmin').classList.add('hidden');
+                document.getElementById('navBtnHome').classList.remove('hidden');
+                switchAdminTab(pendingAdminViewTab);
+            } else {
+                alert("Password yang Anda masukkan SALAH!");
+                document.getElementById('adminPwdInput').value = '';
+                document.getElementById('adminPwdInput').focus();
             }
         }
 
@@ -823,11 +859,11 @@
 
         function changeAdminPassword() {
             const savedPwd = localStorage.getItem('rbe_admin_pwd') || 'AGUNG';
-            const oldPwd = prompt("Masukkan Password LAMA:");
+            const oldPwd = prompt("Masukkan Password Admin LAMA:");
             
             if (oldPwd === null) return;
             if (oldPwd === savedPwd) {
-                const newPwd = prompt("Masukkan Password BARU:");
+                const newPwd = prompt("Masukkan Password Admin BARU:");
                 if (newPwd && newPwd.trim() !== '') {
                     localStorage.setItem('rbe_admin_pwd', newPwd);
                     alert("Password berhasil diubah!");
@@ -879,10 +915,12 @@
                             <td class="px-6 py-3 text-sm text-center">${statusBadge}</td>
                             <td class="px-6 py-3 text-sm text-center">
                                 ${user.status === 'pending' || user.status === 'rejected' ? 
-                                `<button onclick="updateMemberStatus(${user.id}, 'approved')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs mr-1 shadow-sm"><i class="fas fa-check"></i> Setujui</button>` : ''}
+                                `<button onclick="updateMemberStatus(${user.id}, 'approved')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs mr-1 mb-1 shadow-sm"><i class="fas fa-check"></i> Setujui</button>` : ''}
                                 
                                 ${user.status === 'pending' || user.status === 'approved' ? 
-                                `<button onclick="updateMemberStatus(${user.id}, 'rejected')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs shadow-sm"><i class="fas fa-times"></i> Tolak</button>` : ''}
+                                `<button onclick="updateMemberStatus(${user.id}, 'rejected')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs mr-1 mb-1 shadow-sm"><i class="fas fa-times"></i> Tolak</button>` : ''}
+                                
+                                <button onclick="deleteMember(${user.id}, '${user.username}')" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs mb-1 shadow-sm"><i class="fas fa-trash"></i> Hapus</button>
                             </td>
                         `;
                         tbody.appendChild(tr);
@@ -908,10 +946,29 @@
                 
                 if(error) throw error;
                 loadAdminMembers(); 
-                checkPendingRegistrations(); // Update notifikasi juga
+                checkPendingRegistrations(); 
             } catch(e) {
                 console.error(e);
                 alert("Gagal memperbarui status.");
+            }
+        }
+
+        async function deleteMember(id, username) {
+            if(!confirm(`PERINGATAN! Apakah Anda yakin ingin MENGHAPUS permanen akun "${username}"?`)) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('users_rbe')
+                    .delete()
+                    .eq('id', id);
+                
+                if(error) throw error;
+                loadAdminMembers(); 
+                checkPendingRegistrations(); 
+                alert(`Akun "${username}" berhasil dihapus dari database.`);
+            } catch(e) {
+                console.error(e);
+                alert("Gagal menghapus akun.");
             }
         }
 
@@ -1268,7 +1325,6 @@
             }
         }
 
-        // --- Fungsi Bantuan ---
         function showTableLoading(show) {
             const loader = document.getElementById('loadingIndicator');
             if (show) { loader.classList.remove('hidden'); loader.classList.add('flex'); } 
