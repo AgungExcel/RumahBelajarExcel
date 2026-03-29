@@ -547,9 +547,46 @@
             }
         }
         
-        document.addEventListener('DOMContentLoaded', () => {
+        // --- Verifikasi Sesi & Inisialisasi Aplikasi ---
+        async function initApp() {
             updateAuthUI();
-            checkPendingRegistrations(); // Cek pendaftar baru saat halaman dimuat
+            checkPendingRegistrations();
+            
+            // Fallback: Cek notifikasi pendaftar baru setiap 15 detik 
+            // (Berfungsi otomatis meskipun fitur Realtime Supabase di-dashboard belum dihidupkan)
+            setInterval(checkPendingRegistrations, 15000); 
+
+            // Verifikasi ketat: Cek DB apakah user masih benar-benar berstatus 'approved'
+            // Mencegah error dimana user yang sudah ditolak/dihapus masih nyangkut di cache browser (localStorage)
+            if (loggedInMember && isSupabaseActive) {
+                try {
+                    const { data } = await supabaseClient
+                        .from('users_rbe')
+                        .select('status')
+                        .eq('username', loggedInMember.username)
+                        .maybeSingle();
+
+                    if (!data || data.status !== 'approved') {
+                        loggedInMember = null;
+                        localStorage.removeItem('rbe_logged_member');
+                        sessionStorage.removeItem('rbe_logged_member');
+                        updateAuthUI();
+                    } else {
+                        loggedInMember.status = data.status;
+                        if (localStorage.getItem('rbe_logged_member')) {
+                            localStorage.setItem('rbe_logged_member', JSON.stringify(loggedInMember));
+                        }
+                    }
+                } catch(e) { console.error("Gagal verifikasi:", e); }
+            }
+
+            // Memulai muat file dari Google Drive setelah sesi dipastikan aman
+            loadSidebarCategories();
+            loadFiles(ROOT_FOLDER_ID);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
         });
 
         function openAuthModal() {
@@ -997,11 +1034,6 @@
         
         let currentFolderId = ROOT_FOLDER_ID;
         let subFolderIds = []; 
-
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSidebarCategories();
-            loadFiles(ROOT_FOLDER_ID);
-        });
 
         async function loadSidebarCategories() {
             const ul = document.getElementById('categoryList');
