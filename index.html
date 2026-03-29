@@ -64,7 +64,7 @@
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <img src="rbe.png" alt="Logo" class="h-8 w-8 object-contain rounded-full border border-gray-200 bg-white">
-                <span class="font-bold text-brand-hover hidden md:block">RBE App</span>
+                <span class="font-bold text-brand-hover hidden md:block">Rumah Belajar Excel</span>
             </div>
             
             <div class="flex items-center gap-2 md:gap-4">
@@ -86,13 +86,12 @@
 
     <div class="max-w-7xl mx-auto p-4 md:p-6 mt-2">
         
-        <!-- Header Utama -->
+        <!-- Header Utama (Logo Transparan) -->
         <div class="text-center mb-8 flex flex-col items-center">
-            <img src="rbe.png" alt="Logo Rumah Belajar Excel" class="h-24 md:h-32 mb-4 object-contain">
-            <h1 class="text-3xl md:text-4xl font-bold text-brand-hover mb-2">
-                Rumah Belajar Excel
-            </h1>
-            <p class="text-gray-600 font-medium text-lg">Akses Member File Excel Bebas Tanpa Batas</p>
+            <!-- Logo diperbesar, Judul h1 dihapus -->
+            <img src="rbe.png" alt="Logo Rumah Belajar Excel" class="h-32 md:h-48 mb-2 object-contain bg-transparent">
+            
+            <p class="text-gray-600 font-medium text-lg mt-2">Akses Member File Excel Bebas Tanpa Batas</p>
             <span class="mt-3 inline-block bg-yellow-400 text-yellow-900 font-bold py-1 px-4 rounded-full text-sm shadow-sm border border-yellow-500 tracking-wide">
                 <i class="fas fa-star text-xs mr-1"></i> Belajar Excel Gak Nyesel
             </span>
@@ -205,7 +204,7 @@
                     <div class="flex-shrink-0"><i class="fas fa-exclamation-triangle text-yellow-500"></i></div>
                     <div class="ml-3">
                         <p class="text-sm text-yellow-700">
-                            <strong>Perhatian:</strong> Kredensial Supabase belum diisi. Untuk sementara log unduhan hanya disimpan di perangkat ini (Local Storage).
+                            <strong>Perhatian:</strong> Kunci Anon (Anon Key) Supabase belum diisi di dalam kode HTML. Untuk sementara log unduhan hanya disimpan di memori perangkat ini (Local Storage).
                         </p>
                     </div>
                 </div>
@@ -259,26 +258,17 @@
         // ==========================================
         // KONFIGURASI SUPABASE DATABASE (REALTIME)
         // ==========================================
-        // Ganti URL dan KEY di bawah ini dengan project Supabase milik Anda
-        const SUPABASE_URL = 'URL_PROJECT_SUPABASE_ANDA_DISINI'; 
-        const SUPABASE_KEY = 'KUNCI_ANON_SUPABASE_ANDA_DISINI';
         
-        // Buat tabel di Supabase SQL Editor dengan perintah berikut:
-        /*
-            CREATE TABLE log_unduhan (
-                id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-                waktu TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-                id_pengguna TEXT,
-                nama_file TEXT,
-                ukuran_file BIGINT
-            );
-            -- Jangan lupa matikan RLS (Row Level Security) untuk tabel ini agar bisa di-insert publik
-        */
+        // --- MASUKKAN KREDENSIAL SUPABASE ANDA DI SINI ---
+        const SUPABASE_URL = 'https://zopppritiajuxggghowg.supabase.co'; 
+        
+        // PENTING: Anda harus mengganti tulisan di bawah dengan Kunci (Anon/Public Key) milik Supabase Anda agar bisa tersambung
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcHBwcml0aWFqdXhnZ2dob3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzExNDUsImV4cCI6MjA5MDM0NzE0NX0.rjNya_AgiaFeNAuPAzfeRjLuZdQnB9LIBVX-AcFnqJI'; 
 
         let supabaseClient = null;
         let isSupabaseActive = false;
 
-        if(SUPABASE_URL !== 'URL_PROJECT_SUPABASE_ANDA_DISINI') {
+        if(SUPABASE_KEY !== 'KUNCI_ANON_SUPABASE_ANDA_DISINI') {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             isSupabaseActive = true;
         }
@@ -370,14 +360,12 @@
         // === FUNGSI ADMIN & TRACKING (SUPABASE / LOCAL) ===
         async function trackDownload(fileName, fileSize) {
             if (isSupabaseActive) {
-                // Simpan ke Supabase
                 try {
                     await supabaseClient.from('log_unduhan').insert([
                         { id_pengguna: currentUserId, nama_file: fileName, ukuran_file: fileSize }
                     ]);
                 } catch(e) { console.error("Error Supabase:", e); }
             } else {
-                // Fallback LocalStorage jika Supabase belum diset
                 let history = JSON.parse(localStorage.getItem('rbe_downloads') || '[]');
                 history.unshift({ time: new Date().toISOString(), user: currentUserId, fileName: fileName, size: fileSize });
                 localStorage.setItem('rbe_downloads', JSON.stringify(history));
@@ -396,14 +384,12 @@
             let history = [];
 
             if (isSupabaseActive) {
-                // Ambil data dari Supabase
                 try {
                     const { data, error } = await supabaseClient
                         .from('log_unduhan')
                         .select('*')
                         .order('waktu', { ascending: false });
                     if(data) {
-                        // Ubah format data supabase agar cocok dengan fungsi render
                         history = data.map(d => ({
                             time: d.waktu,
                             user: d.id_pengguna,
@@ -420,8 +406,6 @@
             loading.classList.remove('flex');
             
             document.getElementById('totalDownloads').innerText = history.length;
-            
-            // Simpan array di global untuk fungsi export Excel
             window.currentLogData = history;
 
             if (history.length === 0) {
@@ -461,7 +445,6 @@
             if(confirm("PERINGATAN! Anda yakin ingin menghapus seluruh log unduhan?\nData yang dihapus tidak dapat dikembalikan.")) {
                 if(isSupabaseActive) {
                     try {
-                        // Supabase tidak mengizinkan delete() tanpa filter. Kita akali dengan delete jika id tidak null
                         await supabaseClient.from('log_unduhan').delete().not('id', 'is', null);
                     } catch(e) { console.error("Error Reset Supabase:", e); }
                 } else {
@@ -478,7 +461,6 @@
                 return;
             }
             
-            // Format ulang data JSON menjadi susunan kolom excel
             const excelData = window.currentLogData.map(log => {
                 const d = new Date(log.time);
                 return {
@@ -491,12 +473,9 @@
                 }
             });
 
-            // Konversi ke worksheet
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Log Unduhan");
-            
-            // Trigger download file
             XLSX.writeFile(workbook, "Log_Unduhan_RBE.xlsx");
         }
 
@@ -581,7 +560,7 @@
             loadFiles(currentFolderId, keyword);
         }
 
-        // 4. Memuat File
+        // 4. Memuat File & Perbaikan Bug Pencarian
         async function loadFiles(folderId, keyword = '') {
             showTableLoading(true);
             hideMessage();
@@ -591,13 +570,21 @@
 
             let query = '';
             
-            if (folderId === ROOT_FOLDER_ID && keyword !== '') {
+            // Perbaikan Bug Pencarian (Error 400 Google API Limit)
+            // Mengamankan tanda kutip tunggal pada keyword pencarian
+            const safeKeyword = keyword.replace(/'/g, "\\'");
+
+            if (folderId === ROOT_FOLDER_ID && safeKeyword !== '') {
                 let parentQueries = [`'${ROOT_FOLDER_ID}' in parents`];
-                subFolderIds.forEach(id => parentQueries.push(`'${id}' in parents`));
-                query = `(${parentQueries.join(' or ')}) and name contains '${keyword}' and trashed = false`;
+                
+                // Membatasi maksimal 30 subfolder untuk pencarian global 
+                // agar terhindar dari error panjang query API (400 Bad Request)
+                subFolderIds.slice(0, 30).forEach(id => parentQueries.push(`'${id}' in parents`));
+                
+                query = `(${parentQueries.join(' or ')}) and name contains '${safeKeyword}' and trashed = false`;
             } else {
                 query = `'${folderId}' in parents and trashed = false`;
-                if (keyword) query += ` and name contains '${keyword}'`;
+                if (safeKeyword) query += ` and name contains '${safeKeyword}'`;
             }
 
             try {
@@ -634,7 +621,6 @@
                             </button>
                         `;
                     } else {
-                        // Tambahan tombol SHARE di sebelah tombol UNDUH
                         actionButton = `
                             <div class="flex items-center justify-center gap-2">
                                 <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
@@ -651,12 +637,16 @@
                         <td class="px-6 py-4 flex items-center">
                             <i class="${getFileIcon(file.mimeType)} text-2xl mr-4 w-8 text-center"></i>
                             <div class="flex flex-col">
-                                <span class="font-medium text-gray-800 truncate max-w-[200px] md:max-w-md" title="${file.name}">${file.name}</span>
+                                <!-- Nama Folder Sekarang Bisa Diklik -->
+                                <span class="font-medium text-gray-800 truncate max-w-[200px] md:max-w-md ${isFolder ? 'cursor-pointer hover:text-brand-main hover:underline' : ''}" title="${file.name}" ${isFolder ? `onclick="openFolder('${file.id}', '${safeFileName}')"` : ''}>
+                                    ${file.name}
+                                </span>
                                 <span class="text-xs text-gray-400 mt-0.5">${getFileExtension(file.name, isFolder)}</span>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center text-sm text-gray-500 whitespace-nowrap">
-                            ${isFolder ? '-' : formatBytes(file.size)}
+                            <!-- Label Folder Khusus Jika File Bertipe Folder -->
+                            ${isFolder ? '<span class="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-medium border border-gray-200">Folder</span>' : formatBytes(file.size)}
                         </td>
                         <td class="px-6 py-4 text-center whitespace-nowrap">
                             ${actionButton}
