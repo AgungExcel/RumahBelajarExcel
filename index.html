@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rumah Belajar Excel - Pencarian File</title>
     
-    <!-- Meta Tags untuk Thumbnail Share -->
+    <!-- Meta Tags untuk Thumbnail Share (Preview WhatsApp, FB, Telegram) -->
     <meta property="og:title" content="Rumah Belajar Excel - Download File">
     <meta property="og:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
-    <meta property="og:url" content="https://website-anda.com/">
-    <meta property="og:image" content="https://website-anda.com/rbe_depan.png">
+    <!-- Ganti URL di bawah dengan domain web Anda yang asli agar gambar muncul -->
+    <meta property="og:url" content="https://domain-anda.com/">
+    <meta property="og:image" content="https://domain-anda.com/rbe_depan.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:type" content="website">
@@ -17,7 +18,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Rumah Belajar Excel - Download File">
     <meta name="twitter:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
-    <meta name="twitter:image" content="https://website-anda.com/rbe_depan.png">
+    <!-- Ganti URL di bawah dengan domain web Anda yang asli agar gambar muncul -->
+    <meta name="twitter:image" content="https://domain-anda.com/rbe_depan.png">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="rbe.png?v=2">
@@ -1211,15 +1213,13 @@
         const ROOT_FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
         
         let currentFolderId = ROOT_FOLDER_ID;
-        let allDescendantFolderIds = []; // Global penyimpan ID seluruh sub-folder
+        let allDescendantFolderIds = []; 
         let folderHistory = []; 
 
-        // Sistem Cache Penyimpanan Lokal
         let globalFilesCache = null; 
         let localFolderCache = {};   
         let folderFetchPromise = null;
 
-        // LIVE SEARCH DEBOUNCER
         let searchTimeoutId = null;
 
         function handleSearchInput() {
@@ -1253,7 +1253,7 @@
             return diffDays <= 7;
         }
 
-        // Fungsi Ambil Data dengan Pengananganan Error Aman
+        // PENGAMANAN ERROR: Jika ada folder private, diam-diam dilewati (silent break)
         async function fetchAllDriveFiles(query) {
             let allFiles = [];
             let pageToken = null;
@@ -1269,21 +1269,18 @@
                 try {
                     const response = await fetch(url);
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error?.message || 'Akses ditolak');
+                        break; // Error izin/private: keluar diam-diam agar folder lain aman
                     }
                     const data = await response.json();
                     if (data.files) allFiles = allFiles.concat(data.files);
                     pageToken = data.nextPageToken; 
                 } catch(e) {
-                    console.warn(`Melewati folder (Error Izin/Koneksi): ${e.message}`);
-                    break;
+                    break; // Error koneksi: keluar diam-diam
                 }
             } while (pageToken);
             return allFiles;
         }
 
-        // Pencari Sub-Folder Secara Rekursif di Latar Belakang
         async function fetchDeeperFolders(parentIds) {
             if (!parentIds || parentIds.length === 0) return;
             
@@ -1292,23 +1289,27 @@
             
             for (let i = 0; i < parentIds.length; i += maxConcurrent) {
                 const chunk = parentIds.slice(i, i + maxConcurrent);
-                // PERBAIKAN: Pisahkan query agar error izin 1 folder tidak menggagalkan folder lain
+                
                 const promises = chunk.map(id => {
                     let query = `('${id}' in parents) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-                    return fetchAllDriveFiles(query);
+                    return fetchAllDriveFiles(query).catch(() => []);
                 });
                 
-                const results = await Promise.all(promises);
-                results.forEach(folders => {
-                    if (folders && folders.length > 0) {
-                        folders.forEach(f => {
-                            if (!allDescendantFolderIds.includes(f.id)) {
-                                allDescendantFolderIds.push(f.id);
-                                newFoundIds.push(f.id);
-                            }
-                        });
-                    }
-                });
+                try {
+                    const results = await Promise.all(promises);
+                    results.forEach(folders => {
+                        if (folders && folders.length > 0) {
+                            folders.forEach(f => {
+                                if (!allDescendantFolderIds.includes(f.id)) {
+                                    allDescendantFolderIds.push(f.id);
+                                    newFoundIds.push(f.id);
+                                }
+                            });
+                        }
+                    });
+                } catch (e) {
+                    // Aman, tidak akan mengganggu proses lain
+                }
             }
             
             if (newFoundIds.length > 0) {
@@ -1326,7 +1327,7 @@
 
                 if (files && files.length > 0) {
                     const directIds = [];
-                    allDescendantFolderIds = []; // reset array 
+                    allDescendantFolderIds = []; 
 
                     files.forEach(folder => {
                         allDescendantFolderIds.push(folder.id); 
@@ -1341,7 +1342,6 @@
                         ul.appendChild(li);
                     });
 
-                    // MEMULAI PENCARIAN REKURSIF DI LATAR BELAKANG
                     folderFetchPromise = fetchDeeperFolders(directIds);
                 }
             } catch (err) {
@@ -1352,7 +1352,6 @@
             }
         }
 
-        // Fungsi Membuka Folder & Mengatur History "Kembali"
         function openFolder(folderId, folderName, isBack = false) {
             currentFolderId = folderId;
             document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${folderName}`;
@@ -1396,7 +1395,6 @@
             }
         }
 
-        // FUNGSI SUMMARY TOTAL FILE
         function updateSummary(filesList) {
             let counts = { folder: 0, excel: 0, word: 0, pdf: 0, powerpoint: 0, image: 0, video: 0, archive: 0, text: 0, other: 0 };
 
@@ -1451,12 +1449,10 @@
             let files = [];
 
             try {
-                // Tentukan Mode Pencarian: Global atau Folder Lokal
                 const isGlobalSearch = (folderId === ROOT_FOLDER_ID && (safeKeyword !== '' || format !== ''));
 
                 if (isGlobalSearch) {
                     
-                    // Tunggu hingga pemindai sub-folder selesai jika masih memindai
                     if (folderFetchPromise) {
                         showTableLoading(true);
                         if(tbody) tbody.innerHTML = '';
@@ -1464,10 +1460,9 @@
                         if(loadingText) loadingText.innerText = "Memindai seluruh struktur folder (mungkin butuh beberapa saat)...";
                         
                         await folderFetchPromise;
-                        folderFetchPromise = null; // Selesai
+                        folderFetchPromise = null; 
                     }
 
-                    // MODE GLOBAL: Gunakan Cache jika sudah pernah ditarik
                     if (!globalFilesCache) {
                         showTableLoading(true);
                         hideMessage();
@@ -1482,25 +1477,27 @@
                         
                         for (let i = 0; i < targetFolders.length; i += maxConcurrent) {
                             const chunk = targetFolders.slice(i, i + maxConcurrent);
-                            // PERBAIKAN: Pisahkan eksekusi agar 1 folder error tidak merusak request folder lain
                             const fetchPromises = chunk.map(id => {
                                 let query = `('${id}' in parents) and trashed = false`;
-                                return fetchAllDriveFiles(query);
+                                return fetchAllDriveFiles(query).catch(() => []);
                             });
 
-                            const results = await Promise.all(fetchPromises);
-                            results.forEach(chunkFiles => {
-                                if (chunkFiles && chunkFiles.length > 0) {
-                                    tempGlobal = tempGlobal.concat(chunkFiles);
-                                }
-                            });
+                            try {
+                                const results = await Promise.all(fetchPromises);
+                                results.forEach(chunkFiles => {
+                                    if (chunkFiles && chunkFiles.length > 0) {
+                                        tempGlobal = tempGlobal.concat(chunkFiles);
+                                    }
+                                });
+                            } catch(e) {
+                                // Aman
+                            }
                         }
                         globalFilesCache = tempGlobal;
                     }
                     files = [...globalFilesCache];
 
                 } else {
-                    // MODE LOKAL: Gunakan cache per-folder
                     if (!localFolderCache[folderId]) {
                         showTableLoading(true);
                         hideMessage();
@@ -1515,7 +1512,6 @@
                     files = [...localFolderCache[folderId]];
                 }
 
-                // PENYARINGAN LOKAL SUPER CEPAT DAN AKURAT
                 if (keyword !== '') {
                     const lowerKeyword = keyword.toLowerCase();
                     files = files.filter(file => (file.name || '').toLowerCase().includes(lowerKeyword));
@@ -1563,11 +1559,9 @@
                     const downloadLink = file.webContentLink ? file.webContentLink : file.webViewLink;
                     const safeFileName = file.name.replace(/'/g, "\\'"); 
                     
-                    // INDIKATOR NEW
                     const isNew = isNewUpload(file.createdTime);
                     const newBadge = isNew ? `<span class="ml-2 px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded shadow-sm animate-pulse border border-red-600 align-middle">NEW</span>` : '';
                     
-                    // HIGHLIGHT TEKS PENCARIAN
                     let displayFileName = file.name;
                     if (keyword !== '') {
                         const regex = new RegExp(`(${escapeRegExp(keyword)})`, 'gi');
