@@ -319,7 +319,6 @@
                             <h2 id="currentFolderName" class="text-xl font-bold text-gray-800 flex items-center">
                                 <i class="fas fa-folder-open text-yellow-500 mr-2"></i> Semua File
                             </h2>
-                            <!-- Tombol Kembali dipindah ke area Summary -->
                         </div>
 
                         <!-- Filter & Area Pencarian -->
@@ -601,7 +600,7 @@
                     adminBadge.innerText = count;
                     adminBadge.classList.remove('hidden');
                 }
-                if(banner) {
+                if(banner && countText) {
                     countText.innerText = count;
                     banner.classList.remove('hidden');
                     banner.classList.add('flex');
@@ -749,25 +748,28 @@
                 if (insertErr) throw insertErr;
 
                 // --- FITUR AUTO WA KE ADMIN VIA FONNTE ---
-                const adminPhone = "08974496448"; 
+                // PERBAIKAN: Format target WA WAJIB kode negara (628...) agar API Fonnte merespons dengan benar
+                const adminPhone = "628974496448"; 
                 const fonnteToken = "XrWjz4U56QYy57wam4qVRnUASss2ipWpjyzabx6Xs1z"; 
                 const waMessage = `🔔 *NOTIFIKASI RBE* 🔔\n\nTerdapat pendaftar Member baru!\n\n👤 *Username:* ${user}\n\nMohon segera buka Aplikasi Rumah Belajar Excel dan masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 
                 try {
-                    const formData = new FormData();
-                    formData.append('target', adminPhone);
-                    formData.append('message', waMessage);
+                    const myHeaders = new Headers();
+                    myHeaders.append("Authorization", fonnteToken);
 
-                    fetch('https://api.fonnte.com/send', {
+                    const formdata = new FormData();
+                    formdata.append("target", adminPhone);
+                    formdata.append("message", waMessage);
+
+                    fetch("https://api.fonnte.com/send", {
                         method: 'POST',
-                        headers: {
-                            'Authorization': fonnteToken
-                        },
-                        body: formData
+                        headers: myHeaders,
+                        body: formdata,
+                        redirect: 'follow'
                     })
-                    .then(response => response.json())
-                    .then(result => console.log('Fonnte Sukses:', result))
-                    .catch(error => console.error('Fonnte Error:', error));
+                    .then(response => response.text())
+                    .then(result => console.log('Fonnte Response:', result))
+                    .catch(error => console.error('Fonnte Request Error:', error));
                 } catch(e) {
                     console.error("Gagal menjalankan API Fonnte:", e);
                 }
@@ -997,9 +999,9 @@
                 if(error) throw error;
 
                 if (!data || data.length === 0) {
-                    emptyState.classList.remove('hidden');
+                    if(emptyState) emptyState.classList.remove('hidden');
                 } else {
-                    emptyState.classList.add('hidden');
+                    if(emptyState) emptyState.classList.add('hidden');
                     data.forEach(user => {
                         const dateObj = new Date(user.created_at);
                         const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -1113,13 +1115,17 @@
                 }
 
                 const totalBadge = document.getElementById('totalDownloads');
-                if(totalBadge) totalBadge.innerText = history.length;
+                // PENGAMANAN EKSTRA: Pastikan elemen tidak null
+                if(totalBadge) {
+                    totalBadge.innerText = history.length;
+                }
+                
                 window.currentLogData = history;
 
                 if (history.length === 0) {
-                    emptyState.classList.remove('hidden');
+                    if (emptyState) emptyState.classList.remove('hidden');
                 } else {
-                    emptyState.classList.add('hidden');
+                    if (emptyState) emptyState.classList.add('hidden');
                     history.forEach(log => {
                         const dateObj = new Date(log.time);
                         const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -1196,7 +1202,7 @@
         let subFolderIds = []; 
         let folderHistory = []; 
 
-        // Fungsi Helper: Mengambil Semua File tanpa batas limit 1000 item
+        // Fungsi Helper: Mengambil Semua File dengan Pagination agar total berapapun bisa tersaring
         async function fetchAllDriveFiles(query) {
             let allFiles = [];
             let pageToken = null;
@@ -1214,7 +1220,7 @@
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
                     if (data.files) allFiles = allFiles.concat(data.files);
-                    pageToken = data.nextPageToken; // Lanjutkan jika masih ada halaman berikutnya
+                    pageToken = data.nextPageToken; 
                 } catch(e) {
                     console.error("Pagination Fetch Error:", e);
                     break;
@@ -1229,7 +1235,6 @@
             const query = `'${ROOT_FOLDER_ID}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
             
             try {
-                // Gunakan fetchAllDriveFiles agar folder yang ribuan tetap terbaca
                 const files = await fetchAllDriveFiles(query);
 
                 if (files && files.length > 0) {
@@ -1248,8 +1253,8 @@
             } catch (err) {
                 console.error("Gagal memuat kategori:", err);
             } finally {
-                loading.classList.add('hidden');
-                ul.classList.remove('hidden');
+                if (loading) loading.classList.add('hidden');
+                if (ul) ul.classList.remove('hidden');
             }
         }
 
@@ -1270,9 +1275,9 @@
 
             const backBtn = document.getElementById('backBtn');
             if (folderHistory.length > 1) {
-                backBtn.classList.remove('hidden');
+                if(backBtn) backBtn.classList.remove('hidden');
             } else {
-                backBtn.classList.add('hidden');
+                if(backBtn) backBtn.classList.add('hidden');
             }
 
             document.getElementById('searchInput').value = '';
@@ -1282,7 +1287,8 @@
                 btn.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent';
             });
             if (folderId === ROOT_FOLDER_ID) {
-                document.getElementById('btn-root').className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border';
+                const rootBtn = document.getElementById('btn-root');
+                if(rootBtn) rootBtn.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border';
             }
 
             loadFiles(currentFolderId);
@@ -1322,6 +1328,7 @@
             });
 
             const summaryDiv = document.getElementById('fileSummary');
+            if(!summaryDiv) return;
             summaryDiv.innerHTML = '';
             
             if(filesList.length === 0) return;
@@ -1344,10 +1351,14 @@
         async function loadFiles(folderId, keyword = '') {
             showTableLoading(true);
             hideMessage();
-            document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('fileSummary').innerHTML = ''; 
+            
+            const emptyState = document.getElementById('emptyState');
+            const summaryDiv = document.getElementById('fileSummary');
+            if(emptyState) emptyState.classList.add('hidden');
+            if(summaryDiv) summaryDiv.innerHTML = ''; 
+            
             const tbody = document.getElementById('fileList');
-            tbody.innerHTML = '';
+            if(tbody) tbody.innerHTML = '';
 
             const safeKeyword = keyword.replace(/'/g, "\\'"); 
             const format = document.getElementById('fileFormatFilter').value;
@@ -1409,7 +1420,7 @@
                 });
 
                 if (files.length === 0) {
-                    document.getElementById('emptyState').classList.remove('hidden');
+                    if(emptyState) emptyState.classList.remove('hidden');
                     return;
                 }
 
@@ -1478,7 +1489,7 @@
                             ${actionButton}
                         </td>
                     `;
-                    tbody.appendChild(tr);
+                    if(tbody) tbody.appendChild(tr);
                 });
 
             } catch (err) {
@@ -1495,18 +1506,28 @@
 
         function showTableLoading(show) {
             const loader = document.getElementById('loadingIndicator');
-            if (show) { loader.classList.remove('hidden'); loader.classList.add('flex'); } 
-            else { loader.classList.add('hidden'); loader.classList.remove('flex'); }
+            if (show) { 
+                if(loader) loader.classList.remove('hidden'); 
+                if(loader) loader.classList.add('flex'); 
+            } 
+            else { 
+                if(loader) loader.classList.add('hidden'); 
+                if(loader) loader.classList.remove('flex'); 
+            }
         }
 
         function showMessage(msg, type) {
             const msgArea = document.getElementById('messageArea');
+            if(!msgArea) return;
             msgArea.innerHTML = msg;
             msgArea.className = `text-center py-4 px-6 mb-4 rounded-lg font-medium block ${type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-brand-light text-brand-main border border-brand-border'}`;
             msgArea.classList.remove('hidden');
         }
 
-        function hideMessage() { document.getElementById('messageArea').classList.add('hidden'); }
+        function hideMessage() { 
+            const msgArea = document.getElementById('messageArea');
+            if(msgArea) msgArea.classList.add('hidden'); 
+        }
 
         function formatBytes(bytes, decimals = 2) {
             if (!bytes || bytes === 0) return '0 Bytes';
