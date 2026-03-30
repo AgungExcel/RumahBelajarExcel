@@ -329,7 +329,7 @@
                                 </div>
                                 <input type="text" id="searchInput" placeholder="Ketikkan kata kunci pencarian..." 
                                     class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main focus:border-transparent transition text-sm"
-                                    oninput="handleSearchInput()"> <!-- PERUBAHAN: Menjadi OnInput untuk Live Search -->
+                                    oninput="handleSearchInput()"> 
                             </div>
                             
                             <div class="w-full md:w-4/12 relative">
@@ -344,7 +344,8 @@
                                     <option value="powerpoint">PowerPoint (.ppt)</option>
                                     <option value="image">Gambar (.jpg, .png)</option>
                                     <option value="video">Video (.mp4, dll)</option>
-                                    <option value="archive">Archive (.zip, .rar)</option>
+                                    <option value="archive">Archive / ZIP (.zip, .rar)</option>
+                                    <option value="text">Teks / Dokumen (.txt)</option>
                                 </select>
                                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
                                     <i class="fas fa-chevron-down text-xs"></i>
@@ -380,7 +381,6 @@
                                 <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-0">
                                     <tr class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                         <th class="px-6 py-4">Nama File / Folder</th>
-                                        <!-- TAMBAHAN KOLOM TANGGAL UPLOAD -->
                                         <th class="px-6 py-4 text-center">Tanggal</th>
                                         <th class="px-6 py-4 text-center">Ukuran</th>
                                         <th class="px-6 py-4 text-center">Aksi</th>
@@ -664,7 +664,6 @@
                 } catch(e) { console.error("Gagal verifikasi:", e); }
             }
 
-            // Inisialisasi History Folder saat pertama kali buka web
             folderHistory = [{ id: ROOT_FOLDER_ID, name: 'Semua File' }];
             loadSidebarCategories();
             loadFiles(ROOT_FOLDER_ID);
@@ -750,7 +749,6 @@
                 if (insertErr) throw insertErr;
 
                 // --- FITUR AUTO WA KE ADMIN VIA FONNTE ---
-                // Menggunakan format nomor 628 karena Fonnte merekomendasikan hal tersebut untuk API
                 const adminPhone = "628974496448"; 
                 const fonnteToken = "XrWjz4U56QYy57wam4qVRnUASss2ipWpjyzabx6Xs1z"; 
                 const waMessage = `🔔 *NOTIFIKASI RBE* 🔔\n\nTerdapat pendaftar Member baru!\n\n👤 *Username:* ${user}\n\nMohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
@@ -772,7 +770,6 @@
                     });
                     
                     const result = await response.json();
-                    console.log('Fonnte Response:', result);
                     
                     if (result.status === true) {
                         isFonnteSuccess = true;
@@ -1214,12 +1211,13 @@
         const ROOT_FOLDER_ID = '1JM3Etz2_R-5yAP84lfPk6y1pW-2KWVif';
         
         let currentFolderId = ROOT_FOLDER_ID;
-        let subFolderIds = []; 
+        let allDescendantFolderIds = []; // Global penyimpan ID seluruh sub-folder
         let folderHistory = []; 
 
         // Sistem Cache Penyimpanan Lokal
-        let globalFilesCache = null; // Menyimpan ribuan data untuk Semua File
-        let localFolderCache = {};   // Menyimpan data per-folder
+        let globalFilesCache = null; 
+        let localFolderCache = {};   
+        let folderFetchPromise = null;
 
         // LIVE SEARCH DEBOUNCER
         let searchTimeoutId = null;
@@ -1228,7 +1226,7 @@
             if (searchTimeoutId) clearTimeout(searchTimeoutId);
             searchTimeoutId = setTimeout(() => {
                 triggerSearch();
-            }, 400); // Tunggu 400 milidetik berhenti mengetik sebelum memproses
+            }, 400); 
         }
 
         function triggerSearch() {
@@ -1236,7 +1234,6 @@
             loadFiles(currentFolderId, keyword);
         }
 
-        // Helper Regex untuk Highlight Text
         function escapeRegExp(string) {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
         }
@@ -1256,7 +1253,7 @@
             return diffDays <= 7;
         }
 
-        // Fungsi Ambil Data dari API
+        // Fungsi Ambil Data dengan Pengananganan Error Aman
         async function fetchAllDriveFiles(query) {
             let allFiles = [];
             let pageToken = null;
@@ -1279,11 +1276,44 @@
                     if (data.files) allFiles = allFiles.concat(data.files);
                     pageToken = data.nextPageToken; 
                 } catch(e) {
-                    console.warn(`Melewati folder (Izin Terbatas): ${e.message}`);
+                    console.warn(`Melewati folder (Error Izin/Koneksi): ${e.message}`);
                     break;
                 }
             } while (pageToken);
             return allFiles;
+        }
+
+        // Pencari Sub-Folder Secara Rekursif di Latar Belakang
+        async function fetchDeeperFolders(parentIds) {
+            if (!parentIds || parentIds.length === 0) return;
+            
+            const maxConcurrent = 5;
+            let newFoundIds = [];
+            
+            for (let i = 0; i < parentIds.length; i += maxConcurrent) {
+                const chunk = parentIds.slice(i, i + maxConcurrent);
+                // PERBAIKAN: Pisahkan query agar error izin 1 folder tidak menggagalkan folder lain
+                const promises = chunk.map(id => {
+                    let query = `('${id}' in parents) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+                    return fetchAllDriveFiles(query);
+                });
+                
+                const results = await Promise.all(promises);
+                results.forEach(folders => {
+                    if (folders && folders.length > 0) {
+                        folders.forEach(f => {
+                            if (!allDescendantFolderIds.includes(f.id)) {
+                                allDescendantFolderIds.push(f.id);
+                                newFoundIds.push(f.id);
+                            }
+                        });
+                    }
+                });
+            }
+            
+            if (newFoundIds.length > 0) {
+                await fetchDeeperFolders(newFoundIds);
+            }
         }
 
         async function loadSidebarCategories() {
@@ -1295,8 +1325,12 @@
                 const files = await fetchAllDriveFiles(query);
 
                 if (files && files.length > 0) {
+                    const directIds = [];
+                    allDescendantFolderIds = []; // reset array 
+
                     files.forEach(folder => {
-                        subFolderIds.push(folder.id); 
+                        allDescendantFolderIds.push(folder.id); 
+                        directIds.push(folder.id);
                         
                         const li = document.createElement('li');
                         li.innerHTML = `
@@ -1306,6 +1340,9 @@
                         `;
                         ul.appendChild(li);
                     });
+
+                    // MEMULAI PENCARIAN REKURSIF DI LATAR BELAKANG
+                    folderFetchPromise = fetchDeeperFolders(directIds);
                 }
             } catch (err) {
                 console.error("Gagal memuat kategori:", err);
@@ -1315,6 +1352,7 @@
             }
         }
 
+        // Fungsi Membuka Folder & Mengatur History "Kembali"
         function openFolder(folderId, folderName, isBack = false) {
             currentFolderId = folderId;
             document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${folderName}`;
@@ -1360,7 +1398,7 @@
 
         // FUNGSI SUMMARY TOTAL FILE
         function updateSummary(filesList) {
-            let counts = { folder: 0, excel: 0, word: 0, pdf: 0, powerpoint: 0, image: 0, video: 0, archive: 0, other: 0 };
+            let counts = { folder: 0, excel: 0, word: 0, pdf: 0, powerpoint: 0, image: 0, video: 0, archive: 0, text: 0, other: 0 };
 
             filesList.forEach(file => {
                 const mime = (file.mimeType || '').toLowerCase();
@@ -1374,6 +1412,7 @@
                 else if (mime.includes('image') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.bmp')) counts.image++;
                 else if (mime.includes('video') || name.endsWith('.mp4') || name.endsWith('.mkv') || name.endsWith('.avi') || name.endsWith('.mov')) counts.video++;
                 else if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z') || name.endsWith('.zip') || name.endsWith('.rar')) counts.archive++;
+                else if (mime.includes('text') || name.endsWith('.txt') || name.endsWith('.rtf')) counts.text++;
                 else counts.other++;
             });
 
@@ -1393,7 +1432,8 @@
             if (counts.image > 0) html += `<div class="bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-image mr-1.5 text-teal-500"></i> Gambar: ${counts.image}</div>`;
             if (counts.video > 0) html += `<div class="bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-video mr-1.5 text-purple-500"></i> Video: ${counts.video}</div>`;
             if (counts.archive > 0) html += `<div class="bg-gray-200 text-gray-800 border border-gray-300 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-archive mr-1.5 text-gray-600"></i> Archive: ${counts.archive}</div>`;
-            if (counts.other > 0) html += `<div class="bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-alt mr-1.5 text-gray-500"></i> Lainnya: ${counts.other}</div>`;
+            if (counts.text > 0) html += `<div class="bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-alt mr-1.5 text-indigo-600"></i> Teks: ${counts.text}</div>`;
+            if (counts.other > 0) html += `<div class="bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file mr-1.5 text-gray-500"></i> Lainnya: ${counts.other}</div>`;
 
             summaryDiv.innerHTML = html;
         }
@@ -1415,6 +1455,18 @@
                 const isGlobalSearch = (folderId === ROOT_FOLDER_ID && (safeKeyword !== '' || format !== ''));
 
                 if (isGlobalSearch) {
+                    
+                    // Tunggu hingga pemindai sub-folder selesai jika masih memindai
+                    if (folderFetchPromise) {
+                        showTableLoading(true);
+                        if(tbody) tbody.innerHTML = '';
+                        const loadingText = document.getElementById('loadingText');
+                        if(loadingText) loadingText.innerText = "Memindai seluruh struktur folder (mungkin butuh beberapa saat)...";
+                        
+                        await folderFetchPromise;
+                        folderFetchPromise = null; // Selesai
+                    }
+
                     // MODE GLOBAL: Gunakan Cache jika sudah pernah ditarik
                     if (!globalFilesCache) {
                         showTableLoading(true);
@@ -1422,14 +1474,15 @@
                         if(tbody) tbody.innerHTML = '';
                         
                         const loadingText = document.getElementById('loadingText');
-                        if(loadingText) loadingText.innerText = "Mempersiapkan pencarian cerdas (mengunduh ribuan data awal)...";
+                        if(loadingText) loadingText.innerText = "Mengunduh ribuan data pencarian mendalam...";
                         
-                        let targetFolders = [ROOT_FOLDER_ID, ...subFolderIds];
+                        let targetFolders = [ROOT_FOLDER_ID, ...allDescendantFolderIds];
                         const maxConcurrent = 5; 
                         let tempGlobal = [];
                         
                         for (let i = 0; i < targetFolders.length; i += maxConcurrent) {
                             const chunk = targetFolders.slice(i, i + maxConcurrent);
+                            // PERBAIKAN: Pisahkan eksekusi agar 1 folder error tidak merusak request folder lain
                             const fetchPromises = chunk.map(id => {
                                 let query = `('${id}' in parents) and trashed = false`;
                                 return fetchAllDriveFiles(query);
@@ -1479,6 +1532,7 @@
                         if (format === 'image') return mime.includes('image') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.bmp');
                         if (format === 'video') return mime.includes('video') || name.endsWith('.mp4') || name.endsWith('.mkv') || name.endsWith('.avi') || name.endsWith('.mov');
                         if (format === 'archive') return mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z') || name.endsWith('.zip') || name.endsWith('.rar');
+                        if (format === 'text') return mime.includes('text') || mime.includes('plain') || name.endsWith('.txt') || name.endsWith('.rtf');
                         return false; 
                     });
                 }
@@ -1585,8 +1639,8 @@
 
             } catch (err) {
                 console.error(err);
-                if (err.message && (err.message.includes('File not found') || err.message.includes('insufficient permissions') || err.message.includes('does not have sufficient permissions'))) {
-                    showMessage('Akses Ditolak: Pastikan folder Google Drive dan isinya sudah diatur ke "Siapa saja yang memiliki link" -> "Melihat".', 'error');
+                if (err.message && (err.message.includes('File not found') || err.message.includes('insufficient permissions'))) {
+                    showMessage('Akses Ditolak: Pastikan folder Google Drive diatur ke "Siapa saja yang memiliki link" -> "Melihat".', 'error');
                 } else {
                     showMessage('Terjadi kesalahan saat memuat data. Periksa koneksi Anda.', 'error');
                 }
@@ -1646,6 +1700,7 @@
             if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'fas fa-file-powerpoint text-orange-500';
             if (mimeType.includes('video')) return 'fas fa-file-video text-purple-500';
             if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('compressed') || mimeType.includes('tar') || mimeType.includes('7z')) return 'fas fa-file-archive text-gray-600';
+            if (mimeType.includes('text') || mimeType.includes('plain')) return 'fas fa-file-alt text-indigo-500';
             return 'fas fa-file-alt text-gray-500';
         }
     </script>
