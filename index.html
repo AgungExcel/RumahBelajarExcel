@@ -1090,6 +1090,8 @@
                     data.forEach(user => {
                         const dateObj = new Date(user.created_at);
                         const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                        // TAMBAHAN: Menarik data jam dan menit
+                        const formattedTime = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
                         
                         let statusBadge = '';
                         if (user.status === 'pending') statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">Menunggu</span>';
@@ -1099,7 +1101,10 @@
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-gray-50';
                         tr.innerHTML = `
-                            <td class="px-6 py-3 text-sm text-gray-500">${formattedDate}</td>
+                            <td class="px-6 py-3 text-sm text-gray-500">
+                                <span class="font-medium text-gray-700">${formattedDate}</span><br>
+                                <span class="text-xs">${formattedTime} WIB</span>
+                            </td>
                             <td class="px-6 py-3 text-sm font-bold text-gray-700 uppercase">${user.username}</td>
                             <td class="px-6 py-3 text-sm font-mono text-gray-600 tracking-widest font-semibold">${user.password}</td>
                             <td class="px-6 py-3 text-sm text-center">${statusBadge}</td>
