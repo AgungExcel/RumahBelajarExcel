@@ -716,7 +716,33 @@
 
                 if (insertErr) throw insertErr;
 
-                alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN. Anda baru bisa login setelah Admin menyetujuinya.");
+                // --- FITUR AUTO WA KE ADMIN VIA FONNTE ---
+                const adminPhone = "08974496448"; // Nomor WhatsApp Admin RBE
+                const fonnteToken = "XrWjz4U56QYy57wam4qVRnUASss2ipWpjyzabx6Xs1z"; // Token API Fonnte
+                const waMessage = `🔔 *NOTIFIKASI RBE* 🔔\n\nTerdapat pendaftar Member baru!\n\n👤 *Username:* ${user}\n\nMohon segera buka Aplikasi Rumah Belajar Excel dan masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
+                
+                // Mengirim pesan di latar belakang (Background Process)
+                try {
+                    const formData = new FormData();
+                    formData.append('target', adminPhone);
+                    formData.append('message', waMessage);
+
+                    fetch('https://api.fonnte.com/send', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': fonnteToken
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(result => console.log('Fonnte Sukses:', result))
+                    .catch(error => console.error('Fonnte Error:', error));
+                } catch(e) {
+                    console.error("Gagal menjalankan API Fonnte:", e);
+                }
+                
+                alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN.\n\nSistem telah mengirimkan pemberitahuan otomatis ke Admin. Silakan tunggu hingga akun Anda disetujui.");
+
                 switchAuthTab('login');
                 document.getElementById('regUsername').value = '';
                 document.getElementById('regPassword').value = '';
