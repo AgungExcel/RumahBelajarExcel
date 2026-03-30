@@ -79,8 +79,8 @@
             
             <div class="flex items-center gap-2 md:gap-4 flex-wrap justify-end">
                 
-                <!-- Indikator User Online -->
-                <div class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 shadow-sm" title="Pengguna Sedang Aktif">
+                <!-- Indikator User Online (Dengan Tooltip Nama User) -->
+                <div id="onlineIndicatorWrapper" class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 shadow-sm cursor-help" title="Memuat data pengguna...">
                     <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                     <span id="onlineCount" class="text-xs font-bold text-green-700 hidden sm:inline">1 Online</span>
                 </div>
@@ -98,6 +98,8 @@
                 
                 <button onclick="toggleView('admin')" id="navBtnAdmin" class="relative bg-gray-800 hover:bg-gray-900 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                     <i class="fas fa-user-shield mr-2"></i> <span class="hidden md:inline">Admin</span>
+                    <!-- Badge Notifikasi Admin -->
+                    <span id="adminNotifBadge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">0</span>
                 </button>
                 <button onclick="goHome()" id="navBtnHome" class="hidden bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                     <i class="fas fa-home mr-2"></i> <span class="hidden md:inline">Beranda</span>
@@ -243,10 +245,19 @@
         
         <!-- Header Utama -->
         <div class="text-center mb-8 flex flex-col items-center">
-            <p class="text-gray-600 font-medium text-lg mt-2">Akses Member File Excel Bebas Tanpa Batas</p>
-            <span class="mt-3 inline-block bg-yellow-400 text-yellow-900 font-bold py-1 px-4 rounded-full text-sm shadow-sm border border-yellow-500 tracking-wide">
+            <span class="inline-block bg-yellow-400 text-yellow-900 font-bold py-1.5 px-5 rounded-full text-sm shadow-sm border border-yellow-500 tracking-wide mt-2">
                 <i class="fas fa-star text-xs mr-1"></i> Belajar Excel Gak Nyesel
             </span>
+
+            <!-- TAMBAHAN: Teks Info Khusus Member yang Elegan -->
+            <div class="mt-5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 px-6 py-4 rounded-2xl shadow-sm text-center max-w-2xl mx-auto">
+                <p class="text-gray-800 text-sm md:text-base font-semibold leading-relaxed">
+                    Aplikasi ini dibuat Khusus Member <span class="text-brand-hover font-extrabold">Rumah Belajar Excel</span>
+                </p>
+                <p class="text-gray-500 text-xs md:text-sm mt-1.5 font-medium">
+                    Jika Anda Belum menjadi Member, Silahkan hubungi WhatsApp di bawah ini s&k berlaku :
+                </p>
+            </div>
             
             <!-- Informasi Kontak -->
             <div class="mt-4 flex flex-col md:flex-row items-center justify-center gap-3 md:gap-5 text-sm text-gray-600 bg-white px-6 py-2.5 rounded-full shadow-sm border border-gray-100">
@@ -308,9 +319,7 @@
                             <h2 id="currentFolderName" class="text-xl font-bold text-gray-800 flex items-center">
                                 <i class="fas fa-folder-open text-yellow-500 mr-2"></i> Semua File
                             </h2>
-                            <button id="backBtn" onclick="openFolder(ROOT_FOLDER_ID, 'Semua File')" class="hidden text-sm text-brand-main hover:text-brand-hover font-medium transition">
-                                <i class="fas fa-arrow-left mr-1"></i> Kembali ke Awal
-                            </button>
+                            <!-- Tombol Kembali dipindah ke area Summary -->
                         </div>
 
                         <!-- Filter & Area Pencarian -->
@@ -319,7 +328,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-search text-gray-400"></i>
                                 </div>
-                                <input type="text" id="searchInput" placeholder="Ketikkan nama file di folder ini..." 
+                                <input type="text" id="searchInput" placeholder="Ketikkan kata kunci pencarian..." 
                                     class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-main focus:border-transparent transition text-sm"
                                     onkeypress="handleKeyPress(event)">
                             </div>
@@ -351,10 +360,20 @@
 
                     <div id="messageArea" class="hidden text-center py-4 px-6 mb-6 rounded-lg font-medium text-sm"></div>
 
+                    <!-- SUMMARY TOTAL FILE & TOMBOL KEMBALI SEJAJAR -->
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 w-full">
+                        <div id="fileSummary" class="flex flex-wrap gap-2 empty:hidden flex-grow"></div>
+                        
+                        <!-- TOMBOL KEMBALI KE FOLDER SEBELUMNYA -->
+                        <button id="backBtn" onclick="goBackFolder()" class="hidden text-sm bg-gray-800 hover:bg-gray-900 text-white py-2 px-4 rounded-lg font-bold transition shadow-md border border-gray-700 flex-shrink-0 flex items-center whitespace-nowrap">
+                            <i class="fas fa-arrow-left mr-2"></i> Kembali ke Folder
+                        </button>
+                    </div>
+
                     <div id="tableContainer" class="bg-white rounded-lg shadow-md overflow-hidden flex-grow relative min-h-[300px]">
                         <div id="loadingIndicator" class="absolute inset-0 bg-white/80 z-10 hidden flex-col justify-center items-center">
                             <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-                            <p class="text-brand-hover font-medium text-sm animate-pulse">Memuat data...</p>
+                            <p class="text-brand-hover font-medium text-sm animate-pulse">Memuat data (mungkin perlu beberapa detik)...</p>
                         </div>
 
                         <div class="overflow-x-auto h-full">
@@ -520,8 +539,21 @@
             .on('presence', { event: 'sync' }, () => {
                 const newState = presenceChannel.presenceState();
                 let onlineCount = Object.keys(newState).length; 
+                
+                // Menyusun daftar nama untuk Tooltip (Saat kursor disorot)
+                let onlineUsersList = [];
+                Object.values(newState).forEach(p => {
+                    if (p.length > 0 && p[0].user) onlineUsersList.push(p[0].user);
+                });
+
                 const badge = document.getElementById('onlineCount');
+                const indicatorWrapper = document.getElementById('onlineIndicatorWrapper');
+                
                 if(badge) badge.innerText = onlineCount + ' Online';
+                if(indicatorWrapper) {
+                    const names = onlineUsersList.map(name => name.replace('Tamu-', 'Tamu ')).join(', ');
+                    indicatorWrapper.title = "PENGGUNA AKTIF SAAT INI:\n" + names;
+                }
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
@@ -531,7 +563,7 @@
 
         async function updatePresence() {
             if (presenceChannel.state === 'joined') {
-                const userName = loggedInMember ? loggedInMember.username : anonGuestId;
+                const userName = loggedInMember ? loggedInMember.username.toUpperCase() : anonGuestId;
                 await presenceChannel.track({
                     user: userName,
                     online_at: new Date().toISOString(),
@@ -565,12 +597,10 @@
             const countText = document.getElementById('adminNotifCount');
             
             if (count > 0) {
-                // Tampilkan angka di tombol Admin
                 if(adminBadge) {
                     adminBadge.innerText = count;
                     adminBadge.classList.remove('hidden');
                 }
-                // Tampilkan banner
                 if(banner) {
                     countText.innerText = count;
                     banner.classList.remove('hidden');
@@ -633,6 +663,8 @@
                 } catch(e) { console.error("Gagal verifikasi:", e); }
             }
 
+            // Inisialisasi History Folder saat pertama kali buka web
+            folderHistory = [{ id: ROOT_FOLDER_ID, name: 'Semua File' }];
             loadSidebarCategories();
             loadFiles(ROOT_FOLDER_ID);
         }
@@ -717,11 +749,10 @@
                 if (insertErr) throw insertErr;
 
                 // --- FITUR AUTO WA KE ADMIN VIA FONNTE ---
-                const adminPhone = "08974496448"; // Nomor WhatsApp Admin RBE
-                const fonnteToken = "XrWjz4U56QYy57wam4qVRnUASss2ipWpjyzabx6Xs1z"; // Token API Fonnte
+                const adminPhone = "08974496448"; 
+                const fonnteToken = "XrWjz4U56QYy57wam4qVRnUASss2ipWpjyzabx6Xs1z"; 
                 const waMessage = `🔔 *NOTIFIKASI RBE* 🔔\n\nTerdapat pendaftar Member baru!\n\n👤 *Username:* ${user}\n\nMohon segera buka Aplikasi Rumah Belajar Excel dan masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 
-                // Mengirim pesan di latar belakang (Background Process)
                 try {
                     const formData = new FormData();
                     formData.append('target', adminPhone);
@@ -1163,6 +1194,34 @@
         
         let currentFolderId = ROOT_FOLDER_ID;
         let subFolderIds = []; 
+        let folderHistory = []; 
+
+        // Fungsi Helper: Mengambil Semua File tanpa batas limit 1000 item
+        async function fetchAllDriveFiles(query) {
+            let allFiles = [];
+            let pageToken = null;
+            do {
+                const url = new URL('https://www.googleapis.com/drive/v3/files');
+                url.searchParams.append('q', query);
+                url.searchParams.append('fields', 'nextPageToken, files(id, name, mimeType, size, webViewLink, webContentLink)');
+                url.searchParams.append('orderBy', 'folder,name');
+                url.searchParams.append('pageSize', '1000');
+                url.searchParams.append('key', API_KEY);
+                if (pageToken) url.searchParams.append('pageToken', pageToken);
+
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+                    if (data.files) allFiles = allFiles.concat(data.files);
+                    pageToken = data.nextPageToken; // Lanjutkan jika masih ada halaman berikutnya
+                } catch(e) {
+                    console.error("Pagination Fetch Error:", e);
+                    break;
+                }
+            } while (pageToken);
+            return allFiles;
+        }
 
         async function loadSidebarCategories() {
             const ul = document.getElementById('categoryList');
@@ -1170,22 +1229,16 @@
             const query = `'${ROOT_FOLDER_ID}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
             
             try {
-                const url = new URL('https://www.googleapis.com/drive/v3/files');
-                url.searchParams.append('q', query);
-                url.searchParams.append('fields', 'files(id, name)');
-                url.searchParams.append('orderBy', 'name');
-                url.searchParams.append('key', API_KEY);
+                // Gunakan fetchAllDriveFiles agar folder yang ribuan tetap terbaca
+                const files = await fetchAllDriveFiles(query);
 
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (response.ok && data.files && data.files.length > 0) {
-                    data.files.forEach(folder => {
+                if (files && files.length > 0) {
+                    files.forEach(folder => {
                         subFolderIds.push(folder.id); 
                         
                         const li = document.createElement('li');
                         li.innerHTML = `
-                            <button onclick="openFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}', this)" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent">
+                            <button onclick="openFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent">
                                 <i class="fas fa-folder text-yellow-400 mr-2 w-5 text-center"></i> ${folder.name}
                             </button>
                         `;
@@ -1200,13 +1253,27 @@
             }
         }
 
-        function openFolder(folderId, folderName, btnElement = null) {
+        // Fungsi Membuka Folder & Mengatur History "Kembali"
+        function openFolder(folderId, folderName, isBack = false) {
             currentFolderId = folderId;
             document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${folderName}`;
             
+            if (!isBack) {
+                if (folderId === ROOT_FOLDER_ID) {
+                    folderHistory = [{ id: ROOT_FOLDER_ID, name: 'Semua File' }];
+                } else {
+                    if (folderHistory.length === 0 || folderHistory[folderHistory.length - 1].id !== folderId) {
+                        folderHistory.push({ id: folderId, name: folderName });
+                    }
+                }
+            }
+
             const backBtn = document.getElementById('backBtn');
-            if (folderId !== ROOT_FOLDER_ID) backBtn.classList.remove('hidden');
-            else backBtn.classList.add('hidden');
+            if (folderHistory.length > 1) {
+                backBtn.classList.remove('hidden');
+            } else {
+                backBtn.classList.add('hidden');
+            }
 
             document.getElementById('searchInput').value = '';
             document.getElementById('fileFormatFilter').value = '';
@@ -1214,14 +1281,19 @@
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent';
             });
-            
-            if (btnElement) {
-                btnElement.className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border';
-            } else if (folderId === ROOT_FOLDER_ID) {
+            if (folderId === ROOT_FOLDER_ID) {
                 document.getElementById('btn-root').className = 'category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-light text-brand-hover border border-brand-border';
             }
 
             loadFiles(currentFolderId);
+        }
+
+        function goBackFolder() {
+            if (folderHistory.length > 1) {
+                folderHistory.pop(); 
+                const parentFolder = folderHistory[folderHistory.length - 1]; 
+                openFolder(parentFolder.id, parentFolder.name, true); 
+            }
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') triggerSearch(); }
@@ -1230,10 +1302,50 @@
             loadFiles(currentFolderId, keyword);
         }
 
+        // FUNGSI SUMMARY TOTAL FILE
+        function updateSummary(filesList) {
+            let counts = { folder: 0, excel: 0, word: 0, pdf: 0, powerpoint: 0, image: 0, video: 0, archive: 0, other: 0 };
+
+            filesList.forEach(file => {
+                const mime = (file.mimeType || '').toLowerCase();
+                const name = (file.name || '').toLowerCase();
+
+                if (mime.includes('folder')) counts.folder++;
+                else if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv') || name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) counts.excel++;
+                else if (mime.includes('wordprocessingml') || mime.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) counts.word++;
+                else if (mime.includes('pdf') || name.endsWith('.pdf')) counts.pdf++;
+                else if (mime.includes('presentation') || mime.includes('powerpoint') || name.endsWith('.pptx') || name.endsWith('.ppt')) counts.powerpoint++;
+                else if (mime.includes('image') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.bmp')) counts.image++;
+                else if (mime.includes('video') || name.endsWith('.mp4') || name.endsWith('.mkv') || name.endsWith('.avi') || name.endsWith('.mov')) counts.video++;
+                else if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z') || name.endsWith('.zip') || name.endsWith('.rar')) counts.archive++;
+                else counts.other++;
+            });
+
+            const summaryDiv = document.getElementById('fileSummary');
+            summaryDiv.innerHTML = '';
+            
+            if(filesList.length === 0) return;
+
+            let html = `<div class="bg-gray-800 text-white text-xs font-bold px-3 py-1.5 rounded-md shadow-sm flex items-center">Total File: ${filesList.length}</div>`;
+            
+            if (counts.folder > 0) html += `<div class="bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-folder mr-1.5 text-yellow-500"></i> Folder: ${counts.folder}</div>`;
+            if (counts.excel > 0) html += `<div class="bg-green-100 text-green-800 border border-green-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-excel mr-1.5 text-green-600"></i> Excel: ${counts.excel}</div>`;
+            if (counts.word > 0) html += `<div class="bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-word mr-1.5 text-blue-600"></i> Word: ${counts.word}</div>`;
+            if (counts.pdf > 0) html += `<div class="bg-red-100 text-red-800 border border-red-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-pdf mr-1.5 text-red-600"></i> PDF: ${counts.pdf}</div>`;
+            if (counts.powerpoint > 0) html += `<div class="bg-orange-100 text-orange-800 border border-orange-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-powerpoint mr-1.5 text-orange-500"></i> PPT: ${counts.powerpoint}</div>`;
+            if (counts.image > 0) html += `<div class="bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-image mr-1.5 text-teal-500"></i> Gambar: ${counts.image}</div>`;
+            if (counts.video > 0) html += `<div class="bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-video mr-1.5 text-purple-500"></i> Video: ${counts.video}</div>`;
+            if (counts.archive > 0) html += `<div class="bg-gray-200 text-gray-800 border border-gray-300 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-archive mr-1.5 text-gray-600"></i> Archive: ${counts.archive}</div>`;
+            if (counts.other > 0) html += `<div class="bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-3 py-1.5 rounded-md flex items-center"><i class="fas fa-file-alt mr-1.5 text-gray-500"></i> Lainnya: ${counts.other}</div>`;
+
+            summaryDiv.innerHTML = html;
+        }
+
         async function loadFiles(folderId, keyword = '') {
             showTableLoading(true);
             hideMessage();
             document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('fileSummary').innerHTML = ''; 
             const tbody = document.getElementById('fileList');
             tbody.innerHTML = '';
 
@@ -1242,51 +1354,32 @@
             let files = [];
 
             try {
+                let targetFolders = [folderId];
                 if (folderId === ROOT_FOLDER_ID && (safeKeyword !== '' || format !== '')) {
-                    let parentQueries = [`'${ROOT_FOLDER_ID}' in parents`];
-                    subFolderIds.forEach(id => parentQueries.push(`'${id}' in parents`));
-                    
-                    const chunkSize = 5; 
-                    const fetchPromises = [];
-                    
-                    for (let i = 0; i < parentQueries.length; i += chunkSize) {
-                        const chunk = parentQueries.slice(i, i + chunkSize);
-                        let query = `(${chunk.join(' or ')}) and trashed = false`;
-                        if (safeKeyword) query += ` and name contains '${safeKeyword}'`;
+                    targetFolders = [ROOT_FOLDER_ID, ...subFolderIds];
+                }
 
-                        const url = new URL('https://www.googleapis.com/drive/v3/files');
-                        url.searchParams.append('q', query);
-                        url.searchParams.append('fields', 'files(id, name, mimeType, size, webViewLink, webContentLink)');
-                        url.searchParams.append('orderBy', 'folder,name');
-                        url.searchParams.append('pageSize', '1000');
-                        url.searchParams.append('key', API_KEY);
-                        
-                        fetchPromises.push(
-                            fetch(url).then(res => res.json()).catch(e => ({ error: { message: e.message } }))
-                        );
-                    }
+                const chunkSize = 5; 
+                const fetchPromises = [];
+                
+                for (let i = 0; i < targetFolders.length; i += chunkSize) {
+                    const chunk = targetFolders.slice(i, i + chunkSize);
+                    const parentsQuery = chunk.map(id => `'${id}' in parents`).join(' or ');
+                    let query = `(${parentsQuery}) and trashed = false`;
 
-                    const results = await Promise.all(fetchPromises);
-                    results.forEach(data => {
-                        if (!data.error && data.files) files = files.concat(data.files);
-                    });
+                    // Melakukan download SEMUA file menggunakan fungsi Pagination baru
+                    fetchPromises.push(fetchAllDriveFiles(query));
+                }
 
-                } else {
-                    let query = `'${folderId}' in parents and trashed = false`;
-                    if (safeKeyword) query += ` and name contains '${safeKeyword}'`;
+                const results = await Promise.all(fetchPromises);
+                results.forEach(chunkFiles => {
+                    files = files.concat(chunkFiles);
+                });
 
-                    const url = new URL('https://www.googleapis.com/drive/v3/files');
-                    url.searchParams.append('q', query);
-                    url.searchParams.append('fields', 'files(id, name, mimeType, size, webViewLink, webContentLink)');
-                    url.searchParams.append('orderBy', 'folder,name');
-                    url.searchParams.append('pageSize', '1000');
-                    url.searchParams.append('key', API_KEY);
-
-                    const response = await fetch(url);
-                    const data = await response.json();
-
-                    if (!response.ok) throw new Error(data.error?.message || 'Gagal mengambil data');
-                    files = data.files || [];
+                // PENYARINGAN SUPER AKURAT (Mencari secara spesifik meskipun file ke-5000)
+                if (keyword !== '') {
+                    const lowerKeyword = keyword.toLowerCase();
+                    files = files.filter(file => (file.name || '').toLowerCase().includes(lowerKeyword));
                 }
 
                 if (format !== '') {
@@ -1300,9 +1393,12 @@
                         if (format === 'image') return mime.includes('image') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.bmp');
                         if (format === 'video') return mime.includes('video') || name.endsWith('.mp4') || name.endsWith('.mkv') || name.endsWith('.avi') || name.endsWith('.mov');
                         if (format === 'archive') return mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('7z') || name.endsWith('.zip') || name.endsWith('.rar');
-                        return true;
+                        
+                        return false; 
                     });
                 }
+
+                updateSummary(files);
 
                 files.sort((a, b) => {
                     const aFolder = a.mimeType === 'application/vnd.google-apps.folder';
