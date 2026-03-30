@@ -29,7 +29,6 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Rumah Belajar Excel - Download File">
     <meta name="twitter:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
-    <!-- Ganti URL di bawah dengan domain web Anda yang asli agar gambar muncul -->
     <meta name="twitter:image" content="https://rbe.web.id/rbe_depan.png">
     
     <!-- Favicon -->
@@ -37,6 +36,9 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SweetAlert2 (Untuk Popup Box Elegan & Modern) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <!-- SheetJS -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -78,6 +80,9 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Mempercantik font khusus modal SweetAlert agar senada dengan Tailwind */
+        .swal2-popup { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans text-gray-800 transition-colors duration-300 relative">
@@ -554,7 +559,6 @@
                 const newState = presenceChannel.presenceState();
                 let onlineCount = Object.keys(newState).length; 
                 
-                // Menyusun daftar nama untuk Tooltip (Saat kursor disorot)
                 let onlineUsersList = [];
                 Object.values(newState).forEach(p => {
                     if (p.length > 0 && p[0].user) onlineUsersList.push(p[0].user);
@@ -762,9 +766,9 @@
                 if (insertErr) throw insertErr;
 
                 // --- FITUR AUTO WA KE ADMIN VIA FONNTE ---
-                // PERBAIKAN FINAL: Format 62 langsung tanpa countryCode
+                // PERBAIKAN: Menggunakan Token Device Sesuai Foto User
                 const adminPhone = "628974496448"; 
-                const fonnteToken = "XrWjz4U56QYy57wam4qVRnUASss2ipWpjyzabx6Xs1z"; 
+                const fonnteToken = "b8m1ScZVjC3XSv7kQxgx"; 
                 const waMessage = `🔔 *NOTIFIKASI RBE* 🔔\n\nTerdapat pendaftar Member baru!\n\n👤 *Username:* ${user}\n\nMohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 
                 let isFonnteSuccess = false;
@@ -773,7 +777,6 @@
                     const formdata = new FormData();
                     formdata.append("target", adminPhone);
                     formdata.append("message", waMessage);
-                    // Hapus parameter countryCode agar tidak dobel format
 
                     const response = await fetch("https://api.fonnte.com/send", {
                         method: 'POST',
@@ -791,7 +794,7 @@
                         console.warn("Fonnte menolak pengiriman:", result.reason || result.detail);
                     }
                 } catch(e) {
-                    console.warn("Fonnte diblokir oleh keamanan Browser (CORS). Menggunakan jalur WA Manual.", e);
+                    console.warn("Fonnte gagal/diblokir oleh keamanan Browser. Menggunakan jalur WA Manual.", e);
                 }
                 
                 switchAuthTab('login');
@@ -799,18 +802,27 @@
                 document.getElementById('regPassword').value = '';
                 checkPendingRegistrations(); 
                 
-                // FALLBACK CERDAS ANTI-POPUP BLOCKER
+                // FALLBACK CERDAS DENGAN SWEETALERT MODERN
                 if (isFonnteSuccess) {
-                    alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN.\n\nSistem telah berhasil mengirimkan pemberitahuan otomatis ke WhatsApp Admin. Silakan tunggu hingga disetujui.");
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Pendaftaran Berhasil!',
+                        text: 'Sistem telah berhasil mengirimkan pemberitahuan otomatis ke WhatsApp Admin. Akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN. Silakan tunggu hingga disetujui.'
+                    });
                 } else {
-                    alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN.\n\n(Penting: Klik 'OK' dan kami akan langsung mengarahkan Anda ke WhatsApp Admin secara aman untuk konfirmasi pendaftaran).");
-                    const waLink = `https://wa.me/628974496448?text=${encodeURIComponent(waMessage)}`;
+                    await Swal.fire({
+                        icon: 'info',
+                        title: 'Pendaftaran Berhasil!',
+                        text: 'Akun Anda berstatus MENUNGGU PERSETUJUAN. (Penting: Klik "OK" untuk melanjutkan pengiriman konfirmasi ke WhatsApp Admin secara manual karena server kami sedang sibuk).',
+                        confirmButtonText: 'OK, Lanjut ke WA'
+                    });
+                    const waLink = `https://wa.me/${adminPhone}?text=${encodeURIComponent(waMessage)}`;
                     window.location.href = waLink; 
                 }
 
             } catch (err) {
                 console.error("Error Register:", err);
-                alert("Terjadi kesalahan sistem saat mendaftar: " + err.message);
+                Swal.fire('Error', 'Terjadi kesalahan sistem saat mendaftar: ' + err.message, 'error');
             }
         }
 
@@ -818,7 +830,9 @@
             const user = document.getElementById('loginUsername').value.trim().toLowerCase();
             const pass = document.getElementById('loginPassword').value.trim();
 
-            if (!user || !pass) return alert("Harap isi username dan password.");
+            if (!user || !pass) {
+                return Swal.fire('Peringatan', 'Harap isi username dan password.', 'warning');
+            }
 
             try {
                 const { data: users, error } = await supabaseClient
@@ -828,26 +842,33 @@
                     .eq('password', pass);
 
                 if (error) {
-                    alert("Error Database Server: " + error.message);
+                    Swal.fire('Error Database Server', error.message, 'error');
                     return;
                 }
 
                 if (!users || users.length === 0) {
-                    alert(`Login Gagal! \n\nPastikan data Anda sudah benar:\nUsername: ${user}\nPassword: ${pass}`);
+                    Swal.fire('Login Gagal!', `Pastikan data Anda sudah benar:\nUsername: ${user}`, 'error');
                     return;
                 }
 
                 const userData = users[0];
 
                 if (userData.status === 'pending') {
-                    alert("Akses Ditolak: Akun Anda masih menunggu persetujuan Admin.");
+                    Swal.fire('Akses Ditolak', 'Akun Anda masih menunggu persetujuan Admin.', 'warning');
                     return;
                 } else if (userData.status === 'rejected') {
-                    alert("Akses Ditolak: Pendaftaran Anda telah ditolak oleh Admin.");
+                    Swal.fire('Akses Ditolak', 'Pendaftaran Anda telah ditolak oleh Admin.', 'error');
                     return;
                 }
 
-                alert(`Selamat datang kembali, ${userData.username.toUpperCase()}!`);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil Login',
+                    text: `Selamat datang kembali, ${userData.username.toUpperCase()}!`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
                 loggedInMember = userData;
                 
                 const rememberMe = document.getElementById('rememberMe').checked;
@@ -867,12 +888,22 @@
 
             } catch(e) {
                 console.error("Error Login:", e);
-                alert("Terjadi kesalahan sistem di browser Anda saat mencoba login.");
+                Swal.fire('Error', 'Terjadi kesalahan sistem di browser Anda saat mencoba login.', 'error');
             }
         }
 
-        function processLogout() {
-            if(confirm("Apakah Anda yakin ingin keluar?")) {
+        async function processLogout() {
+            const result = await Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: "Apakah Anda yakin ingin keluar?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'Ya, Keluar',
+                cancelButtonText: 'Batal'
+            });
+
+            if(result.isConfirmed) {
                 loggedInMember = null;
                 localStorage.removeItem('rbe_logged_member');
                 sessionStorage.removeItem('rbe_logged_member');
@@ -883,6 +914,8 @@
                 updateAuthUI();
                 updatePresence(); 
                 triggerSearch(); 
+                
+                Swal.fire({icon: 'success', title: 'Logout Berhasil', text: 'Anda telah keluar dari sesi.', timer: 1500, showConfirmButton: false});
             }
         }
 
@@ -897,7 +930,7 @@
                 }).catch(console.error);
             } else {
                 navigator.clipboard.writeText(currentUrl);
-                alert("Link aplikasi berhasil disalin ke clipboard!");
+                Swal.fire({icon: 'success', title: 'Berhasil Disalin', text: 'Link aplikasi berhasil disalin ke clipboard!', timer: 1500, showConfirmButton: false});
             }
         }
 
@@ -910,7 +943,7 @@
                 }).catch(console.error);
             } else {
                 navigator.clipboard.writeText(link);
-                alert(`Link untuk "${fileName}" berhasil disalin ke clipboard!`);
+                Swal.fire({icon: 'success', title: 'Berhasil Disalin', text: 'Link file berhasil disalin ke clipboard!', timer: 1500, showConfirmButton: false});
             }
         }
 
@@ -948,7 +981,7 @@
                 document.getElementById('navBtnHome').classList.remove('hidden');
                 switchAdminTab(pendingAdminViewTab);
             } else {
-                alert("Password yang Anda masukkan SALAH!");
+                Swal.fire('Akses Ditolak', 'Password yang Anda masukkan SALAH!', 'error');
                 document.getElementById('adminPwdInput').value = '';
                 document.getElementById('adminPwdInput').focus();
             }
@@ -993,14 +1026,14 @@
             if (oldPwd === savedPwd) {
                 if (newPwd && newPwd.trim() !== '') {
                     localStorage.setItem('rbe_admin_pwd', newPwd);
-                    alert("Password berhasil diubah!");
+                    Swal.fire('Berhasil', 'Password admin berhasil diubah!', 'success');
                     closeChangePwdModal();
                 } else {
-                    alert("Password baru tidak boleh kosong.");
+                    Swal.fire('Peringatan', 'Password baru tidak boleh kosong.', 'warning');
                     document.getElementById('newPwdInput').focus();
                 }
             } else {
-                alert("Password LAMA yang Anda masukkan salah!");
+                Swal.fire('Gagal', 'Password LAMA yang Anda masukkan salah!', 'error');
                 document.getElementById('oldPwdInput').value = '';
                 document.getElementById('oldPwdInput').focus();
             }
@@ -1059,7 +1092,7 @@
                 }
             } catch(e) {
                 console.error("Error Load Member:", e);
-                alert("Gagal memuat data member.");
+                Swal.fire('Error', 'Gagal memuat data member.', 'error');
             } finally {
                 loading.classList.add('hidden');
                 loading.classList.remove('flex');
@@ -1067,7 +1100,18 @@
         }
 
         async function updateMemberStatus(id, newStatus) {
-            if(!confirm(`Apakah Anda yakin ingin ${newStatus === 'approved' ? 'MENYETUJUI' : 'MENOLAK'} pendaftaran ini?`)) return;
+            const actionStr = newStatus === 'approved' ? 'MENYETUJUI' : 'MENOLAK';
+            const result = await Swal.fire({
+                title: 'Konfirmasi',
+                text: `Apakah Anda yakin ingin ${actionStr} pendaftaran ini?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: newStatus === 'approved' ? '#16a34a' : '#dc2626',
+                confirmButtonText: `Ya, ${actionStr}`,
+                cancelButtonText: 'Batal'
+            });
+
+            if(!result.isConfirmed) return;
             
             try {
                 const { error } = await supabaseClient
@@ -1080,12 +1124,22 @@
                 checkPendingRegistrations(); 
             } catch(e) {
                 console.error(e);
-                alert("Gagal memperbarui status.");
+                Swal.fire('Error', 'Gagal memperbarui status.', 'error');
             }
         }
 
         async function deleteMember(id, username) {
-            if(!confirm(`PERINGATAN! Apakah Anda yakin ingin MENGHAPUS permanen akun "${username}"?`)) return;
+            const result = await Swal.fire({
+                title: 'Hapus Akun?',
+                text: `PERINGATAN! Apakah Anda yakin ingin MENGHAPUS permanen akun "${username}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'Ya, Hapus Permanen!',
+                cancelButtonText: 'Batal'
+            });
+
+            if(!result.isConfirmed) return;
             
             try {
                 const { error } = await supabaseClient
@@ -1096,10 +1150,10 @@
                 if(error) throw error;
                 loadAdminMembers(); 
                 checkPendingRegistrations(); 
-                alert(`Akun "${username}" berhasil dihapus dari database.`);
+                Swal.fire('Dihapus', `Akun "${username}" berhasil dihapus dari database.`, 'success');
             } catch(e) {
                 console.error(e);
-                alert("Gagal menghapus akun.");
+                Swal.fire('Error', 'Gagal menghapus akun.', 'error');
             }
         }
 
@@ -1180,7 +1234,7 @@
                 }
             } catch(e) { 
                 console.error("Error Load Supabase (Log Unduhan):", e); 
-                alert("Peringatan: Gagal memuat data log. \nError detail: " + e.message);
+                Swal.fire('Peringatan', 'Gagal memuat data log: ' + e.message, 'warning');
             }
             finally {
                 loading.classList.add('hidden');
@@ -1189,16 +1243,30 @@
         }
 
         async function clearAdminData() {
-            if(confirm("PERINGATAN! Anda yakin ingin menghapus seluruh log unduhan?\nData yang dihapus tidak dapat dikembalikan.")) {
+            const result = await Swal.fire({
+                title: 'Reset Log Unduhan?',
+                text: "PERINGATAN! Anda yakin ingin menghapus seluruh log unduhan? Data tidak dapat dikembalikan.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'Ya, Hapus Semua!',
+                cancelButtonText: 'Batal'
+            });
+
+            if(result.isConfirmed) {
                 try {
                     await supabaseClient.from('log_unduhan').delete().not('id', 'is', null);
                     loadAdminData();
-                } catch(e) { console.error("Error Reset Supabase:", e); }
+                    Swal.fire('Berhasil', 'Log unduhan telah direset.', 'success');
+                } catch(e) { 
+                    console.error("Error Reset Supabase:", e); 
+                    Swal.fire('Error', 'Gagal menghapus log.', 'error');
+                }
             }
         }
 
         function downloadExcelLog() {
-            if(!window.currentLogData || window.currentLogData.length === 0) return alert("Tidak ada data untuk diunduh!");
+            if(!window.currentLogData || window.currentLogData.length === 0) return Swal.fire('Peringatan', 'Tidak ada data untuk diunduh!', 'warning');
             const excelData = window.currentLogData.map(log => {
                 const d = new Date(log.time);
                 return {
@@ -1264,7 +1332,6 @@
             return diffDays <= 7;
         }
 
-        // PENGAMANAN ERROR: Jika ada folder private, diam-diam dilewati (silent break)
         async function fetchAllDriveFiles(query) {
             let allFiles = [];
             let pageToken = null;
@@ -1280,13 +1347,13 @@
                 try {
                     const response = await fetch(url);
                     if (!response.ok) {
-                        break; // Error izin/private: keluar diam-diam agar folder lain aman
+                        break; 
                     }
                     const data = await response.json();
                     if (data.files) allFiles = allFiles.concat(data.files);
                     pageToken = data.nextPageToken; 
                 } catch(e) {
-                    break; // Error koneksi: keluar diam-diam
+                    break; 
                 }
             } while (pageToken);
             return allFiles;
@@ -1319,7 +1386,7 @@
                         }
                     });
                 } catch (e) {
-                    // Aman, tidak akan mengganggu proses lain
+                    // Aman
                 }
             }
             
