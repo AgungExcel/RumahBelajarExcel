@@ -451,11 +451,16 @@
 
             <!-- SEKSI 1: MANAJEMEN MEMBER -->
             <div id="adminMembersSection">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
                     <h3 class="font-bold text-gray-700">Daftar Registrasi Member</h3>
-                    <button onclick="loadAdminMembers()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded transition flex items-center">
-                        <i class="fas fa-sync-alt mr-1"></i> Refresh Data
-                    </button>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="loadAdminMembers()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded transition flex items-center shadow-sm border border-gray-200">
+                            <i class="fas fa-sync-alt mr-1"></i> Refresh Data
+                        </button>
+                        <button onclick="downloadMemberExcel()" class="text-xs text-green-600 hover:text-white border border-green-600 hover:bg-green-600 py-1.5 px-3 rounded transition flex items-center shadow-sm">
+                            <i class="fas fa-file-excel mr-1"></i> Unduh Excel
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="overflow-x-auto border rounded-lg relative min-h-[200px]">
@@ -734,6 +739,13 @@
             errUser.classList.add('hidden');
             errPwd.classList.add('hidden');
 
+            // --- PROTEKSI NAMA MASTER ADMIN ---
+            if (user.toUpperCase() === 'AGUNG' || user.toUpperCase() === 'ADMIN') {
+                errUser.innerText = "Username ini dilindungi sistem dan tidak dapat didaftarkan.";
+                errUser.classList.remove('hidden');
+                return;
+            }
+
             if (!/^[A-Za-z\s]+$/.test(user) || user.length < 3) {
                 errUser.innerText = "Username hanya boleh berisi huruf dan spasi (min. 3 huruf).";
                 errUser.classList.remove('hidden');
@@ -958,6 +970,17 @@
 
             if (view === 'admin') {
                 pendingAdminViewTab = tab;
+
+                // --- BYPASS PASSWORD KHUSUS AGUNG ---
+                if (loggedInMember && loggedInMember.username.toUpperCase() === 'AGUNG') {
+                    document.getElementById('mainView').classList.add('hidden');
+                    document.getElementById('adminView').classList.remove('hidden');
+                    document.getElementById('navBtnAdmin').classList.add('hidden');
+                    document.getElementById('navBtnHome').classList.remove('hidden');
+                    switchAdminTab(pendingAdminViewTab);
+                    return; // Menghentikan kode agar Modal Password tidak muncul
+                }
+
                 document.getElementById('adminPwdInput').value = '';
                 document.getElementById('adminAuthModal').classList.remove('hidden');
             } else {
@@ -1057,6 +1080,9 @@
                 
                 if(error) throw error;
 
+                // Simpan data ke variabel global agar bisa di-download ke Excel
+                window.currentMemberData = data || [];
+
                 if (!data || data.length === 0) {
                     if(emptyState) emptyState.classList.remove('hidden');
                 } else {
@@ -1129,6 +1155,11 @@
         }
 
         async function deleteMember(id, username) {
+            // --- PROTEKSI HAPUS MASTER ADMIN ---
+            if (username.toUpperCase() === 'AGUNG') {
+                return Swal.fire('Akses Ditolak', 'Akun Master Admin tidak dapat dihapus!', 'error');
+            }
+
             const result = await Swal.fire({
                 title: 'Hapus Akun?',
                 text: `PERINGATAN! Apakah Anda yakin ingin MENGHAPUS permanen akun "${username}"?`,
@@ -1155,6 +1186,33 @@
                 console.error(e);
                 Swal.fire('Error', 'Gagal menghapus akun.', 'error');
             }
+        }
+
+        // FUNGSI DOWNLOAD EXCEL UNTUK MEMBER
+        function downloadMemberExcel() {
+            if(!window.currentMemberData || window.currentMemberData.length === 0) {
+                return Swal.fire('Peringatan', 'Tidak ada data member untuk diunduh!', 'warning');
+            }
+            
+            const excelData = window.currentMemberData.map(user => {
+                const d = new Date(user.created_at);
+                let statusText = 'Menunggu';
+                if (user.status === 'approved') statusText = 'Disetujui';
+                else if (user.status === 'rejected') statusText = 'Ditolak';
+
+                return {
+                    "Tanggal Daftar": d.toLocaleDateString('id-ID'),
+                    "Waktu (WIB)": d.toLocaleTimeString('id-ID'),
+                    "Username": user.username.toUpperCase(),
+                    "Password": user.password,
+                    "Status Akun": statusText
+                }
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Daftar Member");
+            XLSX.writeFile(workbook, "Daftar_Member_RBE.xlsx");
         }
 
         // --- TRACKING LOG UNDUHAN ---
