@@ -5,12 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rumah Belajar Excel - Pencarian File</title>
     
+    <!-- Meta Tags standar untuk SEO -->
+    <meta name="title" content="Rumah Belajar Excel - Download File">
+    <meta name="description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
+    <meta name="image" content="https://rbe.web.id/rbe_depan.png">
+
+    <!-- Schema.org / WhatsApp fallback -->
+    <meta itemprop="name" content="Rumah Belajar Excel - Download File">
+    <meta itemprop="description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
+    <meta itemprop="image" content="https://rbe.web.id/rbe_depan.png">
+
     <!-- Meta Tags untuk Thumbnail Share (Preview WhatsApp, FB, Telegram) -->
     <meta property="og:title" content="Rumah Belajar Excel - Download File">
     <meta property="og:description" content="Akses Member File Excel Bebas Tanpa Batas! Belajar Excel Gak Nyesel.">
-    <!-- Ganti URL di bawah dengan domain web Anda yang asli agar gambar muncul -->
     <meta property="og:url" content="https://rbe.web.id/">
     <meta property="og:image" content="https://rbe.web.id/rbe_depan.png">
+    <meta property="og:image:secure_url" content="https://rbe.web.id/rbe_depan.png">
+    <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:type" content="website">
@@ -751,6 +762,7 @@
                 if (insertErr) throw insertErr;
 
                 // --- FITUR AUTO WA KE ADMIN VIA FONNTE ---
+                // PERBAIKAN FINAL: Format 62 langsung tanpa countryCode
                 const adminPhone = "628974496448"; 
                 const fonnteToken = "XrWjz4U56QYy57wam4qVRnUASss2ipWpjyzabx6Xs1z"; 
                 const waMessage = `🔔 *NOTIFIKASI RBE* 🔔\n\nTerdapat pendaftar Member baru!\n\n👤 *Username:* ${user}\n\nMohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
@@ -761,7 +773,7 @@
                     const formdata = new FormData();
                     formdata.append("target", adminPhone);
                     formdata.append("message", waMessage);
-                    formdata.append("countryCode", "62"); 
+                    // Hapus parameter countryCode agar tidak dobel format
 
                     const response = await fetch("https://api.fonnte.com/send", {
                         method: 'POST',
@@ -776,26 +788,25 @@
                     if (result.status === true) {
                         isFonnteSuccess = true;
                     } else {
-                        console.warn("Fonnte menolak pengiriman:", result.reason);
+                        console.warn("Fonnte menolak pengiriman:", result.reason || result.detail);
                     }
                 } catch(e) {
-                    console.error("Gagal Request API Fonnte:", e);
+                    console.warn("Fonnte diblokir oleh keamanan Browser (CORS). Menggunakan jalur WA Manual.", e);
                 }
                 
-                // FALLBACK CERDAS: Jika API Fonnte gagal/limit, langsung buka WA manual
-                if (isFonnteSuccess) {
-                    alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN.\n\nSistem telah berhasil mengirimkan pemberitahuan otomatis ke WhatsApp Admin. Silakan tunggu hingga disetujui.");
-                } else {
-                    alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN.\n\n(Catatan: Sistem auto-notif sedang penuh. Kami akan mengarahkan Anda ke WhatsApp Admin untuk mengirimkan pesan konfirmasi pendaftaran).");
-                    const waLink = `https://wa.me/628974496448?text=${encodeURIComponent(waMessage)}`;
-                    window.open(waLink, '_blank');
-                }
-
                 switchAuthTab('login');
                 document.getElementById('regUsername').value = '';
                 document.getElementById('regPassword').value = '';
-                
                 checkPendingRegistrations(); 
+                
+                // FALLBACK CERDAS ANTI-POPUP BLOCKER
+                if (isFonnteSuccess) {
+                    alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN.\n\nSistem telah berhasil mengirimkan pemberitahuan otomatis ke WhatsApp Admin. Silakan tunggu hingga disetujui.");
+                } else {
+                    alert("Pendaftaran Berhasil!\nNamun akun Anda berstatus MENUNGGU PERSETUJUAN ADMIN.\n\n(Penting: Klik 'OK' dan kami akan langsung mengarahkan Anda ke WhatsApp Admin secara aman untuk konfirmasi pendaftaran).");
+                    const waLink = `https://wa.me/628974496448?text=${encodeURIComponent(waMessage)}`;
+                    window.location.href = waLink; 
+                }
 
             } catch (err) {
                 console.error("Error Register:", err);
