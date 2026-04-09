@@ -482,6 +482,7 @@
         // PATCH: Rename client to prevent copy-paste F12 attacks (Mitigasi Dasar)
         // ==========================================
         const SUPABASE_URL = 'https://zopppritiajuxggghowg.supabase.co'; 
+        // CATATAN: anon key Supabase di frontend tetap harus diamankan dengan RLS di dashboard Supabase.
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcHBwcml0aWFqdXhnZ2dob3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzExNDUsImV4cCI6MjA5MDM0NzE0NX0.rjNya_AgiaFeNAuPAzfeRjLuZdQnB9LIBVX-AcFnqJI'; 
 
         const dbCtx = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -533,6 +534,20 @@
                     online_at: new Date().toISOString(),
                 });
             }
+        }
+
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeJsSingleQuote(value) {
+            return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         }
 
         if (isSupabaseActive) {
@@ -614,6 +629,7 @@
 
                     if (!data || data.status !== 'approved') {
                         loggedInMember = null;
+                isAdminSession = false;
                         localStorage.removeItem('rbe_logged_member');
                         sessionStorage.removeItem('rbe_logged_member');
                         updateAuthUI();
@@ -636,6 +652,7 @@
         });
 
         function goHome() {
+            isAdminSession = false;
             document.getElementById('adminView').classList.add('hidden');
             document.getElementById('mainView').classList.remove('hidden');
             document.getElementById('navBtnHome').classList.add('hidden');
@@ -717,34 +734,16 @@
                 if (insertErr) throw insertErr;
 
                 const adminPhone = "628974496448"; 
-                const fonnteToken = "b8m1ScZVjC3XSv7kQxgx"; 
-                const waMessage = `*NOTIFIKASI RBE*\n\nTerdapat pendaftar Member baru!\n\n*Username:* ${user}\n\nMohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
+                const waMessage = `*NOTIFIKASI RBE*
+
+Terdapat pendaftar Member baru!
+
+*Username:* ${user}
+
+Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 
-                let isFonnteSuccess = false;
-
-                try {
-                    const formdata = new FormData();
-                    formdata.append("target", adminPhone);
-                    formdata.append("message", waMessage);
-
-                    const response = await fetch("https://api.fonnte.com/send", {
-                        method: 'POST',
-                        headers: {
-                            "Authorization": fonnteToken
-                        },
-                        body: formdata
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.status === true) {
-                        isFonnteSuccess = true;
-                    } else {
-                        console.warn("Fonnte menolak pengiriman:", result.reason || result.detail);
-                    }
-                } catch(e) {
-                    console.warn("Fonnte gagal/diblokir oleh keamanan Browser. Menggunakan jalur WA Manual.", e);
-                }
+                const isFonnteSuccess = false;
+                console.info('Notifikasi otomatis dari frontend dinonaktifkan demi keamanan. Gunakan WhatsApp manual atau pindahkan ke backend/server.');
                 
                 switchAuthTab('login');
                 document.getElementById('regUsername').value = '';
@@ -853,6 +852,7 @@
 
             if(result.isConfirmed) {
                 loggedInMember = null;
+                isAdminSession = false;
                 localStorage.removeItem('rbe_logged_member');
                 sessionStorage.removeItem('rbe_logged_member');
                 
@@ -895,6 +895,7 @@
         }
 
         let pendingAdminViewTab = 'members';
+        let isAdminSession = false;
 
         function toggleView(view, tab = 'members') {
             const mainView = document.getElementById('mainView');
@@ -905,7 +906,7 @@
             if (view === 'admin') {
                 pendingAdminViewTab = tab;
 
-                if (loggedInMember && loggedInMember.username.toUpperCase() === 'AGUNG') {
+                if (isAdminSession === true) {
                     document.getElementById('mainView').classList.add('hidden');
                     document.getElementById('adminView').classList.remove('hidden');
                     document.getElementById('navBtnAdmin').classList.add('hidden');
@@ -925,28 +926,59 @@
             document.getElementById('adminAuthModal').classList.add('hidden');
         }
 
-        // PATCH: Validasi Password Admin Diperbaiki (Dihapus dari localStorage)
-        function submitAdminPassword() {
-            const inputPwd = document.getElementById('adminPwdInput').value;
-            
-            // Keamanan Dasar: Master password disimpan di memori JS, BUKAN localStorage
-            const masterPwd = 'AGUNG'; 
+        async function submitAdminPassword() {
+            const inputPwd = document.getElementById('adminPwdInput').value.trim();
 
-            if (inputPwd === masterPwd) {
+            if (!inputPwd) {
+                return Swal.fire('Peringatan', 'Silakan isi password admin terlebih dahulu.', 'warning');
+            }
+
+            try {
+                const { data: adminRows, error } = await dbCtx
+                    .from('users_rbe')
+                    .select('id, username, status')
+                    .eq('username', 'agung')
+                    .eq('password', inputPwd)
+                    .limit(1);
+
+                if (error) throw error;
+
+                const adminUser = adminRows && adminRows.length ? adminRows[0] : null;
+
+                if (!adminUser || adminUser.status !== 'approved') {
+                    isAdminSession = false;
+                    document.getElementById('adminPwdInput').value = '';
+                    document.getElementById('adminPwdInput').focus();
+                    return Swal.fire('Akses Ditolak', 'Password admin salah atau akun admin belum aktif.', 'error');
+                }
+
+                isAdminSession = true;
                 closeAdminAuthModal();
                 document.getElementById('mainView').classList.add('hidden');
                 document.getElementById('adminView').classList.remove('hidden');
                 document.getElementById('navBtnAdmin').classList.add('hidden');
                 document.getElementById('navBtnHome').classList.remove('hidden');
                 switchAdminTab(pendingAdminViewTab);
-            } else {
-                Swal.fire('Akses Ditolak', 'Password yang Anda masukkan SALAH!', 'error');
-                document.getElementById('adminPwdInput').value = '';
-                document.getElementById('adminPwdInput').focus();
+            } catch (e) {
+                console.error('Admin login error:', e);
+                Swal.fire('Error', 'Gagal memverifikasi password admin.', 'error');
             }
         }
 
+        function ensureAdminSession() {
+            if (isAdminSession !== true) {
+                Swal.fire('Akses Ditolak', 'Sesi admin tidak valid. Silakan login admin lagi.', 'error');
+                document.getElementById('adminView').classList.add('hidden');
+                document.getElementById('mainView').classList.remove('hidden');
+                document.getElementById('navBtnAdmin').classList.remove('hidden');
+                document.getElementById('navBtnHome').classList.add('hidden');
+                return false;
+            }
+            return true;
+        }
+
         function switchAdminTab(tabName) {
+            if (!ensureAdminSession()) return;
             const btnMembers = document.getElementById('adminTabMembersBtn');
             const btnLogs = document.getElementById('adminTabLogsBtn');
             const secMembers = document.getElementById('adminMembersSection');
@@ -968,6 +1000,7 @@
         }
 
         async function loadAdminMembers() {
+            if (!ensureAdminSession()) return;
             const tbody = document.getElementById('memberTableBody');
             const emptyState = document.getElementById('memberEmptyState');
             const loading = document.getElementById('memberLoadingIndicator');
@@ -1007,8 +1040,8 @@
                                 <span class="font-medium text-gray-700">${formattedDate}</span><br>
                                 <span class="text-xs">${formattedTime} WIB</span>
                             </td>
-                            <td class="px-6 py-3 text-sm font-bold text-gray-700 uppercase">${user.username}</td>
-                            <td class="px-6 py-3 text-sm font-mono text-gray-600 tracking-widest font-semibold">${user.password}</td>
+                            <td class="px-6 py-3 text-sm font-bold text-gray-700 uppercase">${escapeHtml(user.username)}</td>
+                            <td class="px-6 py-3 text-sm font-mono text-gray-600 tracking-widest font-semibold">••••</td>
                             <td class="px-6 py-3 text-sm text-center">${statusBadge}</td>
                             <td class="px-6 py-3 text-sm text-center">
                                 ${user.status === 'pending' || user.status === 'rejected' ? 
@@ -1017,7 +1050,7 @@
                                 ${user.status === 'pending' || user.status === 'approved' ? 
                                 `<button onclick="updateMemberStatus(${user.id}, 'rejected')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs mr-1 mb-1 shadow-sm"><i class="fas fa-times"></i> Tolak</button>` : ''}
                                 
-                                <button onclick="deleteMember(${user.id}, '${user.username}')" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs mb-1 shadow-sm"><i class="fas fa-trash"></i> Hapus</button>
+                                <button onclick="deleteMember(${user.id}, '${escapeHtml(user.username)}')" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs mb-1 shadow-sm"><i class="fas fa-trash"></i> Hapus</button>
                             </td>
                         `;
                         tbody.appendChild(tr);
@@ -1033,6 +1066,7 @@
         }
 
         async function updateMemberStatus(id, newStatus) {
+            if (!ensureAdminSession()) return;
             const actionStr = newStatus === 'approved' ? 'MENYETUJUI' : 'MENOLAK';
             const result = await Swal.fire({
                 title: 'Konfirmasi',
@@ -1062,6 +1096,7 @@
         }
 
         async function deleteMember(id, username) {
+            if (!ensureAdminSession()) return;
             if (username.toUpperCase() === 'AGUNG') {
                 return Swal.fire('Akses Ditolak', 'Akun Master Admin tidak dapat dihapus!', 'error');
             }
@@ -1095,6 +1130,7 @@
         }
 
         function downloadMemberExcel() {
+            if (!ensureAdminSession()) return;
             if(!window.currentMemberData || window.currentMemberData.length === 0) {
                 return Swal.fire('Peringatan', 'Tidak ada data member untuk diunduh!', 'warning');
             }
@@ -1109,7 +1145,7 @@
                     "Tanggal Daftar": d.toLocaleDateString('id-ID'),
                     "Waktu (WIB)": d.toLocaleTimeString('id-ID'),
                     "Username": user.username.toUpperCase(),
-                    "Password": user.password,
+                    "Password": 'Disembunyikan',
                     "Status Akun": statusText
                 }
             });
@@ -1130,6 +1166,7 @@
         }
 
         async function loadAdminData() {
+            if (!ensureAdminSession()) return;
             const tbody = document.getElementById('adminTableBody');
             const emptyState = document.getElementById('adminEmptyState');
             const loading = document.getElementById('adminLoadingIndicator');
@@ -1181,11 +1218,11 @@
                             </td>
                             <td class="px-6 py-3 text-sm">
                                 <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono border border-gray-200 uppercase">
-                                    <i class="fas fa-user text-gray-400 mr-1"></i> ${log.user}
+                                    <i class="fas fa-user text-gray-400 mr-1"></i> ${escapeHtml(log.user)}
                                 </span>
                             </td>
-                            <td class="px-6 py-3 text-sm font-medium text-brand-hover truncate max-w-[200px] md:max-w-md" title="${log.fileName}">
-                                ${log.fileName}
+                            <td class="px-6 py-3 text-sm font-medium text-brand-hover truncate max-w-[200px] md:max-w-md" title="${escapeHtml(log.fileName)}">
+                                ${escapeHtml(log.fileName)}
                             </td>
                             <td class="px-6 py-3 text-sm text-gray-500 text-right">
                                 ${formatBytes(log.size)}
@@ -1204,6 +1241,7 @@
         }
 
         async function clearAdminData() {
+            if (!ensureAdminSession()) return;
             const result = await Swal.fire({
                 title: 'Reset Log Unduhan?',
                 text: "PERINGATAN! Anda yakin ingin menghapus seluruh log unduhan? Data tidak dapat dikembalikan.",
@@ -1227,6 +1265,7 @@
         }
 
         function downloadExcelLog() {
+            if (!ensureAdminSession()) return;
             if(!window.currentLogData || window.currentLogData.length === 0) return Swal.fire('Peringatan', 'Tidak ada data untuk diunduh!', 'warning');
             const excelData = window.currentLogData.map(log => {
                 const d = new Date(log.time);
@@ -1371,8 +1410,8 @@
                         
                         const li = document.createElement('li');
                         li.innerHTML = `
-                            <button onclick="openFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent">
-                                <i class="fas fa-folder text-yellow-400 mr-2 w-5 text-center"></i> ${folder.name}
+                            <button onclick="openFolder('${folder.id}', '${escapeJsSingleQuote(folder.name)}')" class="category-btn w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-brand-light hover:text-brand-main transition-colors border border-transparent">
+                                <i class="fas fa-folder text-yellow-400 mr-2 w-5 text-center"></i> ${escapeHtml(folder.name)}
                             </button>
                         `;
                         ul.appendChild(li);
@@ -1390,7 +1429,7 @@
 
         function openFolder(folderId, folderName, isBack = false) {
             currentFolderId = folderId;
-            document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${folderName}`;
+            document.getElementById('currentFolderName').innerHTML = `<i class="fas fa-folder-open text-yellow-500 mr-2"></i> ${escapeHtml(folderName)}`;
             
             if (!isBack) {
                 if (folderId === ROOT_FOLDER_ID) {
@@ -1648,7 +1687,7 @@
                         <td class="px-6 py-4 flex items-center">
                             <i class="${getFileIcon(file.mimeType)} text-2xl mr-4 w-8 text-center"></i>
                             <div class="flex flex-col">
-                                <span class="font-medium text-gray-800 truncate max-w-[200px] md:max-w-md ${isFolder ? 'cursor-pointer hover:text-brand-main hover:underline' : ''}" title="${file.name}" ${isFolder ? `onclick="openFolder('${file.id}', '${safeFileName}')"` : ''}>
+                                <span class="font-medium text-gray-800 truncate max-w-[200px] md:max-w-md ${isFolder ? 'cursor-pointer hover:text-brand-main hover:underline' : ''}" title="${escapeHtml(file.name)}" ${isFolder ? `onclick="openFolder('${file.id}', '${safeFileName}')"` : ''}>
                                     ${displayFileName} ${newBadge}
                                 </span>
                                 <span class="text-xs text-gray-400 mt-0.5">${getFileExtension(file.name, isFolder)}</span>
@@ -1696,7 +1735,7 @@
         function showMessage(msg, type) {
             const msgArea = document.getElementById('messageArea');
             if(!msgArea) return;
-            msgArea.innerHTML = msg;
+            msgArea.textContent = msg;
             msgArea.className = `text-center py-4 px-6 mb-4 rounded-lg font-medium block ${type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-brand-light text-brand-main border border-brand-border'}`;
             msgArea.classList.remove('hidden');
         }
