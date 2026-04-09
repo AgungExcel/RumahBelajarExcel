@@ -1031,16 +1031,11 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         }
 
         function shareFile(link, fileName) {
-            if (navigator.share) {
-                navigator.share({
-                    title: fileName,
-                    text: `Buka / Unduh file ini: ${fileName}`,
-                    url: link,
-                }).catch(console.error);
-            } else {
-                navigator.clipboard.writeText(link);
-                Swal.fire({icon: 'success', title: 'Berhasil Disalin', text: 'Link file berhasil disalin ke clipboard!', timer: 1500, showConfirmButton: false});
-            }
+            Swal.fire({
+                icon: 'info',
+                title: 'Fitur dibatasi',
+                text: `Pembagian tautan langsung untuk file terlindungi dinonaktifkan demi keamanan. Silakan akses file dari akun member Anda.`
+            });
         }
 
         let pendingAdminViewTab = 'members';
@@ -1442,6 +1437,37 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             return allKnown.find(file => String(file?.id || '') === String(fileId)) || null;
         }
 
+        const downloadAttemptStore = new Map();
+        let secureDownloadBusy = false;
+
+        function getMemberDownloadIdentity() {
+            if (!loggedInMember || loggedInMember.status !== 'approved') return '';
+            return String(loggedInMember.username || loggedInMember.id || '').trim().toLowerCase();
+        }
+
+        function registerDownloadAttempt(fileId, ok = false) {
+            const key = `${getMemberDownloadIdentity()}::${String(fileId || '')}`;
+            const now = Date.now();
+            const current = downloadAttemptStore.get(key) || { count: 0, lockedUntil: 0, lastOk: 0 };
+            if (current.lockedUntil && current.lockedUntil > now) {
+                return { blocked: true, remainingMs: current.lockedUntil - now };
+            }
+            if (ok) {
+                downloadAttemptStore.set(key, { count: 0, lockedUntil: 0, lastOk: now });
+                return { blocked: false, remainingMs: 0 };
+            }
+            const recentCount = (now - (current.lastTry || 0) < 30000) ? current.count + 1 : 1;
+            const lockedUntil = recentCount >= 4 ? now + 60000 : 0;
+            downloadAttemptStore.set(key, { count: recentCount, lockedUntil, lastOk: current.lastOk || 0, lastTry: now });
+            return { blocked: lockedUntil > now, remainingMs: Math.max(0, lockedUntil - now) };
+        }
+
+        function buildTrustedDriveUrl(fileId) {
+            const safeId = String(fileId || '').trim();
+            if (!/^[a-zA-Z0-9_-]{10,}$/.test(safeId)) return '';
+            return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(safeId)}`;
+        }
+
         async function trackDownload(fileId, fileName, fileSize) {
             try {
                 const knownFile = findKnownFileById(fileId);
@@ -1475,7 +1501,19 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             }
         }
 
-        async function handleSecureDownload(fileId, fileName, fileSize, downloadLink) {
+        async function handleSecureDownload(fileId) {
+            const gate = registerDownloadAttempt(fileId, false);
+            if (gate.blocked) {
+                const waitSec = Math.ceil((gate.remainingMs || 0) / 1000);
+                await Swal.fire('Akses Dibatasi', `Terlalu banyak percobaan unduh pada file ini. Coba lagi ${waitSec} detik lagi.`, 'warning');
+                return false;
+            }
+
+            if (secureDownloadBusy) {
+                return false;
+            }
+            secureDownloadBusy = true;
+
             try {
                 if (!loggedInMember || loggedInMember.status !== 'approved') {
                     await Swal.fire('Akses Ditolak', 'Silahkan login member yang sudah disetujui untuk mengunduh file.', 'warning');
@@ -1488,18 +1526,26 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     return false;
                 }
 
-                const trustedLink = knownFile.webContentLink ? knownFile.webContentLink : knownFile.webViewLink;
-                if (!trustedLink || trustedLink !== downloadLink) {
-                    await Swal.fire('Download Diblokir', 'Tautan unduhan tidak valid.', 'error');
+                const trustedName = String(knownFile.name || '').trim();
+                const trustedSize = Number(knownFile.size || 0);
+                const trustedUrl = buildTrustedDriveUrl(knownFile.id);
+                if (!trustedName || !trustedUrl) {
+                    await Swal.fire('Download Diblokir', 'Metadata file tidak valid.', 'error');
                     return false;
                 }
 
-                await trackDownload(fileId, fileName, fileSize);
-                window.open(trustedLink, '_blank', 'noopener,noreferrer');
+                await trackDownload(knownFile.id, trustedName, trustedSize);
+                registerDownloadAttempt(fileId, true);
+                const newWindow = window.open(trustedUrl, '_blank', 'noopener,noreferrer');
+                if (!newWindow) {
+                    await Swal.fire('Popup Diblokir', 'Browser memblokir jendela unduh. Izinkan pop-up untuk situs ini.', 'warning');
+                }
                 return false;
             } catch (e) {
                 await Swal.fire('Download Diblokir', e?.message || 'Validasi unduhan gagal.', 'error');
                 return false;
+            } finally {
+                secureDownloadBusy = false;
             }
         }
 
@@ -2034,23 +2080,23 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                         if (isFolder) {
                             actionButton = `
                                 <div class="flex items-center justify-center gap-2">
-                                    <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Folder">
+                                    <button onclick="shareFile('', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan Folder">
                                         <i class="fas fa-share-nodes"></i>
                                     </button>
-                                    <a href="${downloadLink}" target="_blank" class="inline-flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                    <button onclick="Swal.fire('Akses Dibatasi', 'Unduh folder langsung dinonaktifkan demi keamanan. Silakan buka folder dari admin atau pindahkan file ke backend private.', 'info')" class="inline-flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
                                         <i class="fas fa-download mr-2 text-xs"></i> Unduh Folder
-                                    </a>
+                                    </button>
                                 </div>
                             `;
                         } else {
                             actionButton = `
                                 <div class="flex items-center justify-center gap-2">
-                                    <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
+                                    <button onclick="shareFile('', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
                                         <i class="fas fa-share-nodes"></i>
                                     </button>
-                                    <a href="#" onclick="return handleSecureDownload('${file.id}', '${safeFileName}', ${file.size || 0}, '${downloadLink}')" rel="noopener noreferrer" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                    <button type="button" onclick="return handleSecureDownload('${file.id}')" rel="noopener noreferrer" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
                                         <i class="fas fa-download mr-2 text-xs"></i> Unduh File
-                                    </a>
+                                    </button>
                                 </div>
                             `;
                         }
