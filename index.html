@@ -679,13 +679,17 @@
 
         async function checkPendingRegistrations() {
             if (!isSupabaseActive) return;
+            if (isAdminSession !== true) {
+                updateAdminNotification(0);
+                return;
+            }
             try {
                 const { count, error } = await dbCtx
                     .from('users_rbe')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'pending');
                 
-                if (!error) updateAdminNotification(count);
+                if (!error) updateAdminNotification(count || 0);
             } catch(e) { console.error(e); }
         }
 
@@ -693,14 +697,16 @@
             const adminBadge = document.getElementById('adminNotifBadge');
             const banner = document.getElementById('adminNotifBanner');
             const countText = document.getElementById('adminNotifCount');
+            const safeCount = Number(count || 0);
+            const shouldShow = isAdminSession === true && safeCount > 0;
             
-            if (count > 0) {
+            if (shouldShow) {
                 if(adminBadge) {
-                    adminBadge.innerText = count;
+                    adminBadge.innerText = safeCount;
                     adminBadge.classList.remove('hidden');
                 }
                 if(banner && countText) {
-                    countText.innerText = count;
+                    countText.innerText = safeCount;
                     banner.classList.remove('hidden');
                     banner.classList.add('flex');
                 }
@@ -1046,6 +1052,42 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         let pendingAdminViewTab = 'members';
         let isAdminSession = false;
         let currentAdminUser = null;
+        const DOWNLOAD_LOG_COOLDOWN_MS = 15000;
+        const validDownloadRegistry = new Map();
+        const recentDownloadLocks = new Map();
+
+        function normalizeCompare(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function normalizeFileKey(fileId, fileName) {
+            return `${String(fileId || '').trim()}::${normalizeCompare(fileName)}`;
+        }
+
+        function registerDownloadableFiles(files) {
+            validDownloadRegistry.clear();
+            (files || []).forEach(file => {
+                if (!file || file.mimeType === 'application/vnd.google-apps.folder') return;
+                validDownloadRegistry.set(normalizeFileKey(file.id, file.name), {
+                    id: file.id,
+                    name: file.name,
+                    size: Number(file.size || 0),
+                    url: file.webContentLink || file.webViewLink || ''
+                });
+            });
+        }
+
+        function isKnownDownload(fileId, fileName, fileSize, url) {
+            const row = validDownloadRegistry.get(normalizeFileKey(fileId, fileName));
+            if (!row) return false;
+            if (Number(fileSize || 0) !== Number(row.size || 0)) return false;
+            if (String(url || '') !== String(row.url || '')) return false;
+            return true;
+        }
+
+        function canWriteDownloadLog() {
+            return Boolean(loggedInMember && loggedInMember.status === 'approved');
+        }
 
         async function refreshAdminSession() {
             try {
@@ -1057,6 +1099,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     isAdminSession = false;
                     currentAdminUser = null;
                     syncAdminControls();
+                    updateAdminNotification(0);
                     return false;
                 }
 
@@ -1064,12 +1107,17 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     .from('admin_users')
                     .select('user_id, email, role')
                     .eq('user_id', user.id)
-                    .single();
+                    .maybeSingle();
 
-                if (adminError || !adminRow) {
+                const authEmail = normalizeCompare(user.email);
+                const adminEmail = normalizeCompare(adminRow?.email);
+                const isValidAdmin = !adminError && adminRow && adminRow.user_id === user.id && authEmail !== '' && adminEmail !== '' && authEmail === adminEmail;
+
+                if (!isValidAdmin) {
                     isAdminSession = false;
                     currentAdminUser = null;
                     syncAdminControls();
+                    updateAdminNotification(0);
                     return false;
                 }
 
@@ -1082,6 +1130,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 isAdminSession = false;
                 currentAdminUser = null;
                 syncAdminControls();
+                updateAdminNotification(0);
                 return false;
             }
         }
@@ -1391,16 +1440,75 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             XLSX.writeFile(workbook, "Daftar_Member_RBE.xlsx");
         }
 
-        async function trackDownload(fileName, fileSize) {
-            const identifier = loggedInMember ? loggedInMember.username : anonGuestId;
+        async function trackDownload(fileId, fileName, fileSize, url) {
+            if (!canWriteDownloadLog()) return false;
+            if (!isKnownDownload(fileId, fileName, fileSize, url)) {
+                console.warn('Blocked suspicious download log attempt:', { fileId, fileName, fileSize, url });
+                return false;
+            }
+
+            const identifier = loggedInMember.username;
+            const logKey = `${normalizeFileKey(fileId, fileName)}::${identifier}`;
+            const now = Date.now();
+            const recentAt = recentDownloadLocks.get(logKey) || 0;
+            if (now - recentAt < DOWNLOAD_LOG_COOLDOWN_MS) {
+                return false;
+            }
+            recentDownloadLocks.set(logKey, now);
+
             try {
                 const payload = {
                     id_pengguna: identifier,
                     nama_file: fileName,
                     ukuran_file: Number(fileSize || 0)
                 };
-                await dbCtx.from('log_unduhan').insert([payload]);
-            } catch(e) { console.error("Error Supabase (trackDownload):", e); }
+                const { error } = await dbCtx.from('log_unduhan').insert([payload]);
+                if (error) throw error;
+                return true;
+            } catch(e) {
+                recentDownloadLocks.delete(logKey);
+                console.error("Error Supabase (trackDownload):", e);
+                return false;
+            }
+        }
+
+        async function secureDownloadFile(fileId, fileName, fileSize, url) {
+            if (!canWriteDownloadLog()) {
+                openAuthModal();
+                return;
+            }
+
+            if (!isKnownDownload(fileId, fileName, fileSize, url)) {
+                Swal.fire('Download Diblokir', 'File tidak lolos verifikasi sistem. Silakan refresh daftar file lalu coba lagi.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(url, { method: 'GET' });
+                if (!response.ok) {
+                    throw new Error(`Gagal mengunduh file (${response.status})`);
+                }
+
+                const blob = await response.blob();
+                if (!(blob.size > 0)) {
+                    throw new Error('File yang diterima kosong atau tidak valid.');
+                }
+
+                const objectUrl = URL.createObjectURL(blob);
+                const tempLink = document.createElement('a');
+                tempLink.href = objectUrl;
+                tempLink.download = fileName || 'download';
+                tempLink.rel = 'noopener';
+                document.body.appendChild(tempLink);
+                tempLink.click();
+                tempLink.remove();
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
+
+                await trackDownload(fileId, fileName, fileSize, url);
+            } catch (e) {
+                console.error('secureDownloadFile error:', e);
+                Swal.fire('Download Gagal', e?.message || 'File gagal diverifikasi untuk diunduh.', 'error');
+            }
         }
 
         async function loadAdminData() {
@@ -1442,7 +1550,9 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     user: d.id_pengguna,
                     fileName: d.nama_file,
                     size: Number(d.ukuran_file || 0)
-                }));
+                })).filter(log => {
+                    return String(log.user || '').trim() !== '' && String(log.fileName || '').trim() !== '' && Number(log.size || 0) > 0;
+                });
 
                 const totalBadge = document.getElementById('totalDownloads');
                 if(totalBadge) {
@@ -1894,6 +2004,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 }
 
                 updateSummary(files);
+                registerDownloadableFiles(files);
 
                 files.sort((a, b) => {
                     const aFolder = a.mimeType === 'application/vnd.google-apps.folder';
@@ -1948,9 +2059,9 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                                     <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
                                         <i class="fas fa-share-nodes"></i>
                                     </button>
-                                    <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                    <button onclick="secureDownloadFile('${file.id}', '${safeFileName}', ${file.size || 0}, '${downloadLink}')" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
                                         <i class="fas fa-download mr-2 text-xs"></i> Unduh File
-                                    </a>
+                                    </button>
                                 </div>
                             `;
                         }
