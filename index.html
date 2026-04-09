@@ -122,6 +122,54 @@
             -webkit-line-clamp: 1;
             -webkit-box-orient: vertical;
         }
+    
+        /* UI polish v5 */
+        #navBtnAdmin, #navBtnHome, #btnLoginNav, #backBtn {
+            border-radius: 999px !important;
+            font-weight: 700 !important;
+            letter-spacing: .01em;
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease, background-color .18s ease;
+        }
+        #navBtnAdmin:hover, #navBtnHome:hover, #btnLoginNav:hover, #backBtn:hover {
+            transform: translateY(-1px);
+            filter: saturate(1.04);
+        }
+        #navBtnAdmin {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18) !important;
+            border: 1px solid rgba(255,255,255,.10);
+        }
+        #navBtnHome {
+            background: linear-gradient(135deg, #16a34a 0%, #059669 100%) !important;
+            box-shadow: 0 12px 28px rgba(5, 150, 105, 0.18) !important;
+        }
+        #btnLoginNav {
+            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%) !important;
+            box-shadow: 0 12px 28px rgba(249, 115, 22, 0.18) !important;
+            border: 0;
+        }
+        #backBtn {
+            background: linear-gradient(135deg, #334155 0%, #0f172a 100%) !important;
+            border: 1px solid rgba(255,255,255,.10) !important;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16) !important;
+        }
+        .category-btn {
+            border-radius: 18px !important;
+            transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+        }
+        .category-btn:hover {
+            transform: translateX(2px);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, .06);
+        }
+        .glass-panel,
+        #tableContainer,
+        #adminView,
+        aside.bg-white,
+        main .bg-white.rounded-2xl,
+        nav.glass-panel {
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07) !important;
+        }
+
     </style>
 </head>
 <body class="min-h-screen font-sans text-gray-800 transition-colors duration-300 relative antialiased">
@@ -298,38 +346,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="soft-card rounded-[24px] p-5">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Keamanan</p>
-                        <h3 class="text-lg font-bold text-slate-800 mt-1">Admin Supabase Auth</h3>
-                        <p class="text-sm text-slate-500 mt-1">Sesi admin lebih aman dan tidak lagi bergantung password hardcoded.</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center"><i class="fas fa-shield-halved"></i></div>
-                </div>
-            </div>
-            <div class="soft-card rounded-[24px] p-5">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Pencarian</p>
-                        <h3 class="text-lg font-bold text-slate-800 mt-1">Cache Lebih Cepat</h3>
-                        <p class="text-sm text-slate-500 mt-1">Data file dipanaskan di background agar pencarian global terasa lebih responsif.</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center"><i class="fas fa-bolt"></i></div>
-                </div>
-            </div>
-            <div class="soft-card rounded-[24px] p-5">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Tampilan</p>
-                        <h3 class="text-lg font-bold text-slate-800 mt-1">UI Modern Profesional</h3>
-                        <p class="text-sm text-slate-500 mt-1">Kartu, glass effect, dan hierarki visual dibuat lebih rapi dan premium.</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 flex items-center justify-center"><i class="fas fa-sparkles"></i></div>
-                </div>
-            </div>
-        </div>
+        
 
         <!-- VIEW 1: APLIKASI UTAMA -->
         <div id="mainView" class="flex flex-col gap-6">
