@@ -112,7 +112,7 @@
                     </button>
                 </div>
                 
-                <button onclick="toggleView('admin')" id="navBtnAdmin" class="relative bg-gray-800 hover:bg-gray-900 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                <button onclick="openAdminArea()" id="navBtnAdmin" class="relative bg-gray-800 hover:bg-gray-900 text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                     <i class="fas fa-user-shield mr-2"></i> <span class="hidden md:inline">Admin</span>
                     <span id="adminNotifBadge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">0</span>
                 </button>
@@ -123,25 +123,32 @@
         </div>
     </nav>
 
-    <!-- Modal Login Admin Elegan -->
+    <!-- Modal Login Admin Supabase Auth -->
     <div id="adminAuthModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all">
             <div class="bg-gray-900 p-6 text-center">
                 <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-gray-700 shadow-inner">
                     <i class="fas fa-user-shield text-3xl text-yellow-500"></i>
                 </div>
-                <h3 class="text-xl font-extrabold text-white tracking-wide">Otorisasi Admin</h3>
-                <p class="text-gray-400 text-sm mt-1">Sistem ini dilindungi enkripsi</p>
+                <h3 class="text-xl font-extrabold text-white tracking-wide">Login Admin</h3>
+                <p class="text-gray-400 text-sm mt-1">Masuk memakai Supabase Auth</p>
             </div>
             <div class="p-6 bg-gray-50">
-                <div class="relative mb-6">
+                <div class="relative mb-4">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-envelope text-gray-400"></i>
+                    </div>
+                    <input type="email" id="adminEmailInput" placeholder="Email Admin" class="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-800 transition bg-white shadow-sm" onkeypress="if(event.key === 'Enter') submitAdminLogin()">
+                </div>
+                <div class="relative mb-3">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i class="fas fa-key text-gray-400"></i>
                     </div>
-                    <input type="password" id="adminPwdInput" placeholder="Masukkan Password" class="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-800 transition bg-white text-center tracking-widest text-lg font-bold shadow-sm" onkeypress="if(event.key === 'Enter') submitAdminPassword()">
+                    <input type="password" id="adminPasswordInput" placeholder="Password Admin" class="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-800 transition bg-white shadow-sm" onkeypress="if(event.key === 'Enter') submitAdminLogin()">
                 </div>
-                <button onclick="submitAdminPassword()" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center">
-                    <i class="fas fa-unlock-alt mr-2"></i> Buka Panel Admin
+                <p class="text-xs text-gray-500 mb-5">Pastikan tabel <span class="font-semibold">admin_users</span> dan akun admin Supabase Auth sudah dibuat.</p>
+                <button onclick="submitAdminLogin()" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center">
+                    <i class="fas fa-unlock-alt mr-2"></i> Login ke Panel Admin
                 </button>
                 <button onclick="closeAdminAuthModal()" class="w-full mt-3 bg-white hover:bg-gray-100 text-gray-600 font-bold py-2.5 px-4 rounded-xl border border-gray-200 transition duration-200 shadow-sm">
                     Batal
@@ -263,7 +270,7 @@
                         <span class="text-sm">Terdapat <strong id="adminNotifCount" class="text-lg">0</strong> pendaftar baru yang menunggu persetujuan!</span>
                     </div>
                 </div>
-                <button onclick="toggleView('admin', 'members')" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-md text-sm font-bold shadow-sm transition whitespace-nowrap w-full sm:w-auto">
+                <button onclick="openAdminArea('members')" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-md text-sm font-bold shadow-sm transition whitespace-nowrap w-full sm:w-auto">
                     <i class="fas fa-user-shield mr-2"></i> Tinjau Sekarang
                 </button>
             </div>
@@ -375,13 +382,16 @@
         <!-- VIEW 2: ADMIN PANEL -->
         <div id="adminView" class="hidden bg-white rounded-lg shadow-md p-6">
             
-            <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-6 gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">
                         <i class="fas fa-cogs text-gray-800 mr-3"></i> Panel Admin RBE
                     </h2>
                     <p class="text-sm text-gray-500 mt-1">Kelola pendaftaran member dan riwayat unduhan.</p>
                 </div>
+                <button onclick="processAdminLogout()" class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                    <i class="fas fa-right-from-bracket mr-2"></i> Logout Admin
+                </button>
             </div>
 
             <!-- Tab Navigasi Admin -->
@@ -491,7 +501,27 @@
         
         let isSupabaseActive = true;
 
-        let loggedInMember = JSON.parse(localStorage.getItem('rbe_logged_member')) || JSON.parse(sessionStorage.getItem('rbe_logged_member')) || null;
+
+        function sanitizeStoredMember(member) {
+            if (!member || typeof member !== 'object') return null;
+            return {
+                id: member.id ?? null,
+                username: member.username ?? '',
+                status: member.status ?? '',
+                created_at: member.created_at ?? null
+            };
+        }
+
+        function buildSafeMemberSession(userData) {
+            return sanitizeStoredMember({
+                id: userData.id,
+                username: userData.username,
+                status: userData.status,
+                created_at: userData.created_at
+            });
+        }
+
+        let loggedInMember = sanitizeStoredMember(JSON.parse(localStorage.getItem('rbe_logged_member')) || JSON.parse(sessionStorage.getItem('rbe_logged_member')) || null);
         
         let anonGuestId = sessionStorage.getItem('rbe_guest_user');
         if (!anonGuestId) {
@@ -616,6 +646,10 @@
         
         async function initApp() {
             updateAuthUI();
+            await refreshAdminSession();
+            dbCtx.auth.onAuthStateChange(async () => {
+                await refreshAdminSession();
+            });
             checkPendingRegistrations();
             setInterval(checkPendingRegistrations, 15000); 
 
@@ -635,8 +669,11 @@
                         updateAuthUI();
                     } else {
                         loggedInMember.status = data.status;
+                        loggedInMember = sanitizeStoredMember(loggedInMember);
                         if (localStorage.getItem('rbe_logged_member')) {
                             localStorage.setItem('rbe_logged_member', JSON.stringify(loggedInMember));
+                        } else if (sessionStorage.getItem('rbe_logged_member')) {
+                            sessionStorage.setItem('rbe_logged_member', JSON.stringify(loggedInMember));
                         }
                     }
                 } catch(e) { console.error("Gagal verifikasi:", e); }
@@ -784,7 +821,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             try {
                 const { data: users, error } = await dbCtx
                     .from('users_rbe')
-                    .select('*')
+                    .select('id, username, status, created_at, password')
                     .eq('username', user)
                     .eq('password', pass);
 
@@ -816,13 +853,16 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     showConfirmButton: false
                 });
 
-                loggedInMember = userData;
-                
+                const safeSession = buildSafeMemberSession(userData);
+                loggedInMember = safeSession;
+
                 const rememberMe = document.getElementById('rememberMe').checked;
+                localStorage.removeItem('rbe_logged_member');
+                sessionStorage.removeItem('rbe_logged_member');
                 if (rememberMe) {
-                    localStorage.setItem('rbe_logged_member', JSON.stringify(userData));
+                    localStorage.setItem('rbe_logged_member', JSON.stringify(safeSession));
                 } else {
-                    sessionStorage.setItem('rbe_logged_member', JSON.stringify(userData));
+                    sessionStorage.setItem('rbe_logged_member', JSON.stringify(safeSession));
                 }
                 
                 document.getElementById('loginUsername').value = '';
@@ -896,6 +936,54 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
 
         let pendingAdminViewTab = 'members';
         let isAdminSession = false;
+        let currentAdminUser = null;
+
+        async function refreshAdminSession() {
+            try {
+                const { data: userData, error: userError } = await dbCtx.auth.getUser();
+                if (userError) throw userError;
+
+                const user = userData?.user;
+                if (!user) {
+                    isAdminSession = false;
+                    currentAdminUser = null;
+                    return false;
+                }
+
+                const { data: adminRow, error: adminError } = await dbCtx
+                    .from('admin_users')
+                    .select('user_id, email, role')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (adminError || !adminRow) {
+                    isAdminSession = false;
+                    currentAdminUser = null;
+                    return false;
+                }
+
+                currentAdminUser = adminRow;
+                isAdminSession = true;
+                return true;
+            } catch (err) {
+                console.error('refreshAdminSession error:', err);
+                isAdminSession = false;
+                currentAdminUser = null;
+                return false;
+            }
+        }
+
+        async function openAdminArea(tab = 'members') {
+            pendingAdminViewTab = tab;
+            const ok = await refreshAdminSession();
+            if (!ok) {
+                document.getElementById('adminEmailInput').value = '';
+                document.getElementById('adminPasswordInput').value = '';
+                document.getElementById('adminAuthModal').classList.remove('hidden');
+                return;
+            }
+            toggleView('admin', tab);
+        }
 
         function toggleView(view, tab = 'members') {
             const mainView = document.getElementById('mainView');
@@ -912,10 +1000,9 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     document.getElementById('navBtnAdmin').classList.add('hidden');
                     document.getElementById('navBtnHome').classList.remove('hidden');
                     switchAdminTab(pendingAdminViewTab);
-                    return; 
+                    return;
                 }
 
-                document.getElementById('adminPwdInput').value = '';
                 document.getElementById('adminAuthModal').classList.remove('hidden');
             } else {
                 goHome();
@@ -926,47 +1013,60 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             document.getElementById('adminAuthModal').classList.add('hidden');
         }
 
-        async function submitAdminPassword() {
-            const inputPwd = document.getElementById('adminPwdInput').value.trim();
+        async function submitAdminLogin() {
+            const email = document.getElementById('adminEmailInput').value.trim();
+            const password = document.getElementById('adminPasswordInput').value;
 
-            if (!inputPwd) {
-                return Swal.fire('Peringatan', 'Silakan isi password admin terlebih dahulu.', 'warning');
+            if (!email || !password) {
+                return Swal.fire('Peringatan', 'Email dan password admin wajib diisi.', 'warning');
             }
 
             try {
-                const { data: adminRows, error } = await dbCtx
-                    .from('users_rbe')
-                    .select('id, username, status')
-                    .eq('username', 'agung')
-                    .eq('password', inputPwd)
-                    .limit(1);
+                const { error: signInError } = await dbCtx.auth.signInWithPassword({ email, password });
+                if (signInError) throw signInError;
 
-                if (error) throw error;
-
-                const adminUser = adminRows && adminRows.length ? adminRows[0] : null;
-
-                if (!adminUser || adminUser.status !== 'approved') {
-                    isAdminSession = false;
-                    document.getElementById('adminPwdInput').value = '';
-                    document.getElementById('adminPwdInput').focus();
-                    return Swal.fire('Akses Ditolak', 'Password admin salah atau akun admin belum aktif.', 'error');
+                const ok = await refreshAdminSession();
+                if (!ok) {
+                    await dbCtx.auth.signOut();
+                    throw new Error('Akun ini berhasil login ke Auth, tetapi belum terdaftar di tabel admin_users.');
                 }
 
-                isAdminSession = true;
                 closeAdminAuthModal();
                 document.getElementById('mainView').classList.add('hidden');
                 document.getElementById('adminView').classList.remove('hidden');
                 document.getElementById('navBtnAdmin').classList.add('hidden');
                 document.getElementById('navBtnHome').classList.remove('hidden');
                 switchAdminTab(pendingAdminViewTab);
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Login Admin Berhasil',
+                    text: `Selamat datang, ${currentAdminUser?.email || email}`,
+                    timer: 1600,
+                    showConfirmButton: false
+                });
             } catch (e) {
                 console.error('Admin login error:', e);
-                Swal.fire('Error', 'Gagal memverifikasi password admin.', 'error');
+                isAdminSession = false;
+                currentAdminUser = null;
+                Swal.fire('Login Admin Gagal', e.message || 'Email atau password admin salah.', 'error');
             }
         }
 
+        async function processAdminLogout() {
+            try {
+                await dbCtx.auth.signOut();
+            } catch (e) {
+                console.error('Admin logout error:', e);
+            }
+            isAdminSession = false;
+            currentAdminUser = null;
+            goHome();
+            Swal.fire({icon: 'success', title: 'Logout Admin Berhasil', text: 'Sesi admin sudah ditutup.', timer: 1500, showConfirmButton: false});
+        }
+
         function ensureAdminSession() {
-            if (isAdminSession !== true) {
+            if (isAdminSession !== true || !currentAdminUser) {
                 Swal.fire('Akses Ditolak', 'Sesi admin tidak valid. Silakan login admin lagi.', 'error');
                 document.getElementById('adminView').classList.add('hidden');
                 document.getElementById('mainView').classList.remove('hidden');
