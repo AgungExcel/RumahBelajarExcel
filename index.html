@@ -1494,36 +1494,61 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(safeId)}`;
         }
 
+        function isIgnorableDownloadLogError(err) {
+            const msg = String(err?.message || err || '').toLowerCase();
+            return (
+                msg.includes('unauthorized') ||
+                msg.includes('jwt') ||
+                msg.includes('permission denied') ||
+                msg.includes('row-level security') ||
+                msg.includes('rls') ||
+                msg.includes('not authenticated') ||
+                msg.includes('invalid claim')
+            );
+        }
+
         async function trackDownload(fileId, fileName, fileSize) {
+            const knownFile = findKnownFileById(fileId);
+            if (!knownFile) {
+                throw new Error('File tidak terdaftar di daftar file aktif.');
+            }
+
+            const knownName = String(knownFile.name || '').trim();
+            const expectedName = String(fileName || '').trim();
+            const expectedSize = Number(fileSize || 0);
+            const knownSize = Number(knownFile.size || 0);
+
+            if (!knownName || knownName !== expectedName) {
+                throw new Error('Validasi nama file gagal.');
+            }
+
+            if (expectedSize > 0 && knownSize > 0 && knownSize !== expectedSize) {
+                throw new Error('Validasi ukuran file gagal.');
+            }
+
             try {
-                const knownFile = findKnownFileById(fileId);
-                if (!knownFile) {
-                    throw new Error('File tidak terdaftar di daftar file aktif.');
-                }
-
-                const knownName = String(knownFile.name || '').trim();
-                const expectedName = String(fileName || '').trim();
-                const expectedSize = Number(fileSize || 0);
-                const knownSize = Number(knownFile.size || 0);
-
-                if (!knownName || knownName !== expectedName) {
-                    throw new Error('Validasi nama file gagal.');
-                }
-
-                if (expectedSize > 0 && knownSize > 0 && knownSize !== expectedSize) {
-                    throw new Error('Validasi ukuran file gagal.');
-                }
-
                 const { error } = await dbCtx.rpc('tulis_log_unduhan', {
                     p_nama_file: expectedName,
                     p_ukuran_file: expectedSize > 0 ? expectedSize : knownSize || null
                 });
 
-                if (error) throw error;
-                return true;
+                if (error) {
+                    if (isIgnorableDownloadLogError(error)) {
+                        console.warn('Log unduhan dilewati karena sesi auth Supabase tidak tersedia untuk member biasa:', error?.message || error);
+                        return { logged: false, ignored: true };
+                    }
+                    console.warn('Log unduhan gagal, download tetap dilanjutkan:', error?.message || error);
+                    return { logged: false, ignored: false };
+                }
+
+                return { logged: true, ignored: false };
             } catch(e) {
-                console.error("Error Supabase (trackDownload):", e);
-                throw e;
+                if (isIgnorableDownloadLogError(e)) {
+                    console.warn('Log unduhan dilewati karena sesi auth Supabase tidak tersedia untuk member biasa:', e?.message || e);
+                    return { logged: false, ignored: true };
+                }
+                console.warn('Error Supabase (trackDownload), download tetap dilanjutkan:', e?.message || e);
+                return { logged: false, ignored: false };
             }
         }
 
@@ -1566,8 +1591,11 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     return false;
                 }
 
-                await trackDownload(knownFile.id, trustedName, trustedSize);
-                resetFailedDownloadAttempt(fileId);
+                const trackResult = await trackDownload(knownFile.id, trustedName, trustedSize);
+                if (trackResult?.logged || trackResult?.ignored) {
+                    resetFailedDownloadAttempt(fileId);
+                }
+
                 const newWindow = window.open(trustedUrl, '_blank', 'noopener,noreferrer');
                 if (!newWindow) {
                     await Swal.fire('Popup Diblokir', 'Browser memblokir jendela unduh. Izinkan pop-up untuk situs ini.', 'warning');
