@@ -218,7 +218,7 @@
                     <i class="fas fa-user-shield text-3xl text-yellow-500"></i>
                 </div>
                 <h3 class="text-xl font-extrabold text-white tracking-wide">Login Admin</h3>
-                <p class="text-gray-400 text-sm mt-1">Masuk memakai Supabase Auth</p>
+                <p class="text-gray-400 text-sm mt-1">Super user Rumah Belajar Excel</p>
             </div>
             <div class="p-6 bg-gray-50">
                 <div class="relative mb-4">
@@ -233,7 +233,6 @@
                     </div>
                     <input type="password" id="adminPasswordInput" placeholder="Password Admin" class="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-800 transition bg-white shadow-sm" onkeypress="if(event.key === 'Enter') submitAdminLogin()">
                 </div>
-                <p class="text-xs text-gray-500 mb-5">Pastikan tabel <span class="font-semibold">admin_users</span> dan akun admin Supabase Auth sudah dibuat.</p>
                 <button onclick="submitAdminLogin()" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center">
                     <i class="fas fa-unlock-alt mr-2"></i> Login ke Panel Admin
                 </button>
@@ -1428,16 +1427,80 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             XLSX.writeFile(workbook, "Daftar_Member_RBE.xlsx");
         }
 
-        async function trackDownload(fileName, fileSize) {
-            const identifier = loggedInMember ? loggedInMember.username : anonGuestId;
+        function getAllKnownFiles() {
+            const combined = [];
+            if (Array.isArray(globalFilesCache)) combined.push(...globalFilesCache);
+            Object.values(localFolderCache || {}).forEach(list => {
+                if (Array.isArray(list)) combined.push(...list);
+            });
+            return dedupeFiles(combined);
+        }
+
+        function findKnownFileById(fileId) {
+            if (!fileId) return null;
+            const allKnown = getAllKnownFiles();
+            return allKnown.find(file => String(file?.id || '') === String(fileId)) || null;
+        }
+
+        async function trackDownload(fileId, fileName, fileSize) {
             try {
-                const payload = {
-                    id_pengguna: identifier,
-                    nama_file: fileName,
-                    ukuran_file: Number(fileSize || 0)
-                };
-                await dbCtx.from('log_unduhan').insert([payload]);
-            } catch(e) { console.error("Error Supabase (trackDownload):", e); }
+                const knownFile = findKnownFileById(fileId);
+                if (!knownFile) {
+                    throw new Error('File tidak terdaftar di daftar file aktif.');
+                }
+
+                const knownName = String(knownFile.name || '').trim();
+                const expectedName = String(fileName || '').trim();
+                const expectedSize = Number(fileSize || 0);
+                const knownSize = Number(knownFile.size || 0);
+
+                if (!knownName || knownName !== expectedName) {
+                    throw new Error('Validasi nama file gagal.');
+                }
+
+                if (expectedSize > 0 && knownSize > 0 && knownSize !== expectedSize) {
+                    throw new Error('Validasi ukuran file gagal.');
+                }
+
+                const { error } = await dbCtx.rpc('tulis_log_unduhan', {
+                    p_nama_file: expectedName,
+                    p_ukuran_file: expectedSize > 0 ? expectedSize : knownSize || null
+                });
+
+                if (error) throw error;
+                return true;
+            } catch(e) {
+                console.error("Error Supabase (trackDownload):", e);
+                throw e;
+            }
+        }
+
+        async function handleSecureDownload(fileId, fileName, fileSize, downloadLink) {
+            try {
+                if (!loggedInMember || loggedInMember.status !== 'approved') {
+                    await Swal.fire('Akses Ditolak', 'Silahkan login member yang sudah disetujui untuk mengunduh file.', 'warning');
+                    return false;
+                }
+
+                const knownFile = findKnownFileById(fileId);
+                if (!knownFile || knownFile.mimeType === 'application/vnd.google-apps.folder') {
+                    await Swal.fire('Download Diblokir', 'File tidak valid atau sudah tidak tersedia.', 'error');
+                    return false;
+                }
+
+                const trustedLink = knownFile.webContentLink ? knownFile.webContentLink : knownFile.webViewLink;
+                if (!trustedLink || trustedLink !== downloadLink) {
+                    await Swal.fire('Download Diblokir', 'Tautan unduhan tidak valid.', 'error');
+                    return false;
+                }
+
+                await trackDownload(fileId, fileName, fileSize);
+                window.open(trustedLink, '_blank', 'noopener,noreferrer');
+                return false;
+            } catch (e) {
+                await Swal.fire('Download Diblokir', e?.message || 'Validasi unduhan gagal.', 'error');
+                return false;
+            }
         }
 
         async function loadAdminData() {
@@ -1985,7 +2048,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                                     <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
                                         <i class="fas fa-share-nodes"></i>
                                     </button>
-                                    <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                    <a href="#" onclick="return handleSecureDownload('${file.id}', '${safeFileName}', ${file.size || 0}, '${downloadLink}')" rel="noopener noreferrer" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
                                         <i class="fas fa-download mr-2 text-xs"></i> Unduh File
                                     </a>
                                 </div>
