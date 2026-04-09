@@ -170,9 +170,6 @@
             box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07) !important;
         }
 
-    
-        #navBtnAdmin, #navBtnHome { pointer-events: auto !important; }
-        #navBtnAdmin[disabled] { pointer-events: none !important; }
     </style>
 </head>
 <body class="min-h-screen font-sans text-gray-800 transition-colors duration-300 relative antialiased">
@@ -481,7 +478,7 @@
                     </h2>
                     <p class="text-sm text-gray-500 mt-1">Kelola pendaftaran member dan riwayat unduhan.</p>
                 </div>
-                <button id="btnAdminLogout" type="button" onclick="processAdminLogout()" class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
+                <button onclick="processAdminLogout()" class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-md shadow-sm transition duration-200 text-sm flex items-center">
                     <i class="fas fa-right-from-bracket mr-2"></i> Logout Admin
                 </button>
             </div>
@@ -740,18 +737,8 @@
             updateAuthUI();
             await refreshAdminSession();
             syncAdminControls();
-            dbCtx.auth.onAuthStateChange(async (event) => {
-                if (event === 'SIGNED_OUT') {
-                    forceClearAdminSessionArtifacts();
-                    isAdminSession = false;
-                    currentAdminUser = null;
-                    closeAdminAuthModal();
-                    setAdminViewState(false);
-                    syncAdminControls();
-                    return;
-                }
-
-                await refreshAdminSession(true);
+            dbCtx.auth.onAuthStateChange(async () => {
+                await refreshAdminSession();
                 syncAdminControls();
             });
             checkPendingRegistrations();
@@ -791,22 +778,6 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initApp();
-
-            window.processAdminLogout = processAdminLogout;
-            window.openAdminArea = openAdminArea;
-            window.submitAdminLogin = submitAdminLogin;
-
-            const bindLogoutFallback = () => {
-                const btn = document.getElementById('btnAdminLogout');
-                if (btn) {
-                    btn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        processAdminLogout();
-                    });
-                }
-            };
-
-            setTimeout(bindLogoutFallback, 300);
         });
 
         function syncAdminControls() {
@@ -829,10 +800,8 @@
 
         function goHome() {
             closeAdminAuthModal();
-            const adminView = document.getElementById('adminView');
-            const mainView = document.getElementById('mainView');
-            if (adminView) adminView.classList.add('hidden');
-            if (mainView) mainView.classList.remove('hidden');
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('mainView').classList.remove('hidden');
             syncAdminControls();
         }
 
@@ -1078,120 +1047,66 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         let isAdminSession = false;
         let currentAdminUser = null;
 
-        
-        function setAdminButtonBusy(isBusy) {
-            const navBtnAdmin = document.getElementById('navBtnAdmin');
-            if (!navBtnAdmin) return;
-            navBtnAdmin.disabled = !!isBusy;
-            navBtnAdmin.classList.toggle('opacity-70', !!isBusy);
-            navBtnAdmin.classList.toggle('cursor-wait', !!isBusy);
-        }
-
-        function forceClearAdminSessionArtifacts() {
+        async function refreshAdminSession() {
             try {
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const k = localStorage.key(i);
-                    if (k && k.includes('supabase.auth.token')) keysToRemove.push(k);
-                }
-                keysToRemove.forEach(k => localStorage.removeItem(k));
-                const sessionKeysToRemove = [];
-                for (let i = 0; i < sessionStorage.length; i++) {
-                    const k = sessionStorage.key(i);
-                    if (k && k.includes('supabase.auth.token')) sessionKeysToRemove.push(k);
-                }
-                sessionKeysToRemove.forEach(k => sessionStorage.removeItem(k));
-            } catch (e) {
-                console.warn('forceClearAdminSessionArtifacts warning:', e);
-            }
-        }
+                const { data: userData, error: userError } = await dbCtx.auth.getUser();
+                if (userError) throw userError;
 
-        async function refreshAdminSession(force = false) {
-            if (adminSessionCheckPromise && !force) return adminSessionCheckPromise;
-
-            adminSessionCheckPromise = (async () => {
-                try {
-                    const sessionResult = await dbCtx.auth.getSession();
-                    const sessionUser = sessionResult?.data?.session?.user || null;
-
-                    if (!sessionUser) {
-                        isAdminSession = false;
-                        currentAdminUser = null;
-                        syncAdminControls();
-                        return false;
-                    }
-
-                    const { data: userData, error: userError } = await dbCtx.auth.getUser();
-                    if (userError) throw userError;
-
-                    const user = userData?.user;
-                    if (!user) {
-                        isAdminSession = false;
-                        currentAdminUser = null;
-                        syncAdminControls();
-                        return false;
-                    }
-
-                    const { data: adminRow, error: adminError } = await dbCtx
-                        .from('admin_users')
-                        .select('user_id, email, role')
-                        .eq('user_id', user.id)
-                        .maybeSingle();
-
-                    if (adminError || !adminRow) {
-                        isAdminSession = false;
-                        currentAdminUser = null;
-                        syncAdminControls();
-                        return false;
-                    }
-
-                    currentAdminUser = adminRow;
-                    isAdminSession = true;
-                    syncAdminControls();
-                    return true;
-                } catch (err) {
-                    console.error('refreshAdminSession error:', err);
+                const user = userData?.user;
+                if (!user) {
                     isAdminSession = false;
                     currentAdminUser = null;
                     syncAdminControls();
                     return false;
-                } finally {
-                    adminSessionCheckPromise = null;
                 }
-            })();
 
-            return adminSessionCheckPromise;
+                const { data: adminRow, error: adminError } = await dbCtx
+                    .from('admin_users')
+                    .select('user_id, email, role')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (adminError || !adminRow) {
+                    isAdminSession = false;
+                    currentAdminUser = null;
+                    syncAdminControls();
+                    return false;
+                }
+
+                currentAdminUser = adminRow;
+                isAdminSession = true;
+                syncAdminControls();
+                return true;
+            } catch (err) {
+                console.error('refreshAdminSession error:', err);
+                isAdminSession = false;
+                currentAdminUser = null;
+                syncAdminControls();
+                return false;
+            }
         }
 
         async function openAdminArea(tab = 'members') {
             pendingAdminViewTab = tab;
-
-            if (adminActionLock) return;
-            adminActionLock = true;
-            setAdminButtonBusy(true);
-
+            const navBtnAdmin = document.getElementById('navBtnAdmin');
+            if (navBtnAdmin) {
+                navBtnAdmin.disabled = true;
+                navBtnAdmin.classList.add('opacity-70', 'cursor-wait');
+            }
             try {
-                if (!document.getElementById('adminView').classList.contains('hidden') && isAdminSession) {
-                    switchAdminTab(tab);
-                    return;
-                }
-
-                const ok = await refreshAdminSession(true);
+                const ok = await refreshAdminSession();
                 if (!ok) {
                     document.getElementById('adminEmailInput').value = '';
                     document.getElementById('adminPasswordInput').value = '';
                     document.getElementById('adminAuthModal').classList.remove('hidden');
                     return;
                 }
-
-                closeAdminAuthModal();
                 setAdminViewState(true, tab);
-            } catch (err) {
-                console.error('openAdminArea error:', err);
-                Swal.fire('Error', 'Panel admin gagal dibuka. Silakan coba lagi.', 'error');
             } finally {
-                adminActionLock = false;
-                setAdminButtonBusy(false);
+                if (navBtnAdmin) {
+                    navBtnAdmin.disabled = false;
+                    navBtnAdmin.classList.remove('opacity-70', 'cursor-wait');
+                }
             }
         }
 
@@ -1235,17 +1150,13 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 return Swal.fire('Peringatan', 'Email dan password admin wajib diisi.', 'warning');
             }
 
-            if (adminActionLock) return;
-            adminActionLock = true;
-
             try {
                 const { error: signInError } = await dbCtx.auth.signInWithPassword({ email, password });
                 if (signInError) throw signInError;
 
-                const ok = await refreshAdminSession(true);
+                const ok = await refreshAdminSession();
                 if (!ok) {
-                    await dbCtx.auth.signOut({ scope: 'local' });
-                    forceClearAdminSessionArtifacts();
+                    await dbCtx.auth.signOut();
                     throw new Error('Akun ini berhasil login ke Auth, tetapi belum terdaftar di tabel admin_users.');
                 }
 
@@ -1263,66 +1174,33 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 console.error('Admin login error:', e);
                 isAdminSession = false;
                 currentAdminUser = null;
-                syncAdminControls();
                 Swal.fire('Login Admin Gagal', e.message || 'Email atau password admin salah.', 'error');
-            } finally {
-                adminActionLock = false;
             }
         }
 
         async function processAdminLogout() {
-            if (adminActionLock) return;
-
-            adminActionLock = true;
-            const logoutBtn = document.getElementById('btnAdminLogout');
-            if (logoutBtn) {
-                logoutBtn.disabled = true;
-                logoutBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            }
+            const result = await Swal.fire({
+                title: 'Logout Admin?',
+                text: 'Sesi admin akan ditutup dari browser ini.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'Ya, Logout',
+                cancelButtonText: 'Batal'
+            });
+            if (!result.isConfirmed) return;
 
             try {
-                try {
-                    await dbCtx.auth.signOut();
-                } catch (e1) {
-                    console.warn('signOut global gagal, coba scope local:', e1);
-                    try {
-                        await dbCtx.auth.signOut({ scope: 'local' });
-                    } catch (e2) {
-                        console.warn('signOut local juga gagal:', e2);
-                    }
-                }
-
-                forceClearAdminSessionArtifacts();
-                isAdminSession = false;
-                currentAdminUser = null;
-                closeAdminAuthModal();
-                setAdminViewState(false);
-                syncAdminControls();
-
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Logout Admin Berhasil',
-                    text: 'Sesi admin sudah ditutup. Halaman akan dimuat ulang.',
-                    timer: 1200,
-                    showConfirmButton: false
-                });
-
-                window.location.reload();
+                await dbCtx.auth.signOut({ scope: 'local' });
             } catch (e) {
-                console.error('Admin logout fatal error:', e);
-                forceClearAdminSessionArtifacts();
-                isAdminSession = false;
-                currentAdminUser = null;
-                setAdminViewState(false);
-                syncAdminControls();
-                Swal.fire('Logout Dipaksa', 'Sesi lokal admin sudah dibersihkan. Silakan buka ulang halaman.', 'warning');
-            } finally {
-                adminActionLock = false;
-                if (logoutBtn) {
-                    logoutBtn.disabled = false;
-                    logoutBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                }
+                console.error('Admin logout error:', e);
             }
+            isAdminSession = false;
+            currentAdminUser = null;
+            closeAdminAuthModal();
+            setAdminViewState(false);
+            await refreshAdminSession();
+            Swal.fire({icon: 'success', title: 'Logout Admin Berhasil', text: 'Sesi admin sudah ditutup.', timer: 1500, showConfirmButton: false});
         }
 
         function ensureAdminSession() {
