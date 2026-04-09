@@ -1438,28 +1438,54 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         }
 
         const downloadAttemptStore = new Map();
-        let secureDownloadBusy = false;
+        const activeDownloadLocks = new Map();
 
         function getMemberDownloadIdentity() {
             if (!loggedInMember || loggedInMember.status !== 'approved') return '';
             return String(loggedInMember.username || loggedInMember.id || '').trim().toLowerCase();
         }
 
-        function registerDownloadAttempt(fileId, ok = false) {
-            const key = `${getMemberDownloadIdentity()}::${String(fileId || '')}`;
+        function getDownloadAttemptKey(fileId) {
+            return `${getMemberDownloadIdentity()}::${String(fileId || '')}`;
+        }
+
+        function getPerFileLock(fileId) {
+            const key = getDownloadAttemptKey(fileId);
             const now = Date.now();
-            const current = downloadAttemptStore.get(key) || { count: 0, lockedUntil: 0, lastOk: 0 };
+            const lockedUntil = Number(activeDownloadLocks.get(key) || 0);
+            if (lockedUntil > now) {
+                return { blocked: true, remainingMs: lockedUntil - now, key };
+            }
+            if (lockedUntil) activeDownloadLocks.delete(key);
+            return { blocked: false, remainingMs: 0, key };
+        }
+
+        function setPerFileLock(fileId, ms = 1800) {
+            const key = getDownloadAttemptKey(fileId);
+            activeDownloadLocks.set(key, Date.now() + ms);
+            return key;
+        }
+
+        function clearPerFileLockByKey(key) {
+            if (key) activeDownloadLocks.delete(key);
+        }
+
+        function registerFailedDownloadAttempt(fileId) {
+            const key = getDownloadAttemptKey(fileId);
+            const now = Date.now();
+            const current = downloadAttemptStore.get(key) || { failCount: 0, lockedUntil: 0, lastFailAt: 0 };
             if (current.lockedUntil && current.lockedUntil > now) {
                 return { blocked: true, remainingMs: current.lockedUntil - now };
             }
-            if (ok) {
-                downloadAttemptStore.set(key, { count: 0, lockedUntil: 0, lastOk: now });
-                return { blocked: false, remainingMs: 0 };
-            }
-            const recentCount = (now - (current.lastTry || 0) < 30000) ? current.count + 1 : 1;
-            const lockedUntil = recentCount >= 4 ? now + 60000 : 0;
-            downloadAttemptStore.set(key, { count: recentCount, lockedUntil, lastOk: current.lastOk || 0, lastTry: now });
+            const failCount = (now - (current.lastFailAt || 0) < 20000) ? current.failCount + 1 : 1;
+            const lockedUntil = failCount >= 8 ? now + 45000 : 0;
+            downloadAttemptStore.set(key, { failCount, lockedUntil, lastFailAt: now });
             return { blocked: lockedUntil > now, remainingMs: Math.max(0, lockedUntil - now) };
+        }
+
+        function resetFailedDownloadAttempt(fileId) {
+            const key = getDownloadAttemptKey(fileId);
+            downloadAttemptStore.delete(key);
         }
 
         function buildTrustedDriveUrl(fileId) {
@@ -1502,17 +1528,11 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         }
 
         async function handleSecureDownload(fileId) {
-            const gate = registerDownloadAttempt(fileId, false);
-            if (gate.blocked) {
-                const waitSec = Math.ceil((gate.remainingMs || 0) / 1000);
-                await Swal.fire('Akses Dibatasi', `Terlalu banyak percobaan unduh pada file ini. Coba lagi ${waitSec} detik lagi.`, 'warning');
+            const lock = getPerFileLock(fileId);
+            if (lock.blocked) {
                 return false;
             }
-
-            if (secureDownloadBusy) {
-                return false;
-            }
-            secureDownloadBusy = true;
+            const lockKey = setPerFileLock(fileId, 1800);
 
             try {
                 if (!loggedInMember || loggedInMember.status !== 'approved') {
@@ -1522,6 +1542,12 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
 
                 const knownFile = findKnownFileById(fileId);
                 if (!knownFile || knownFile.mimeType === 'application/vnd.google-apps.folder') {
+                    const failGate = registerFailedDownloadAttempt(fileId);
+                    if (failGate.blocked) {
+                        const waitSec = Math.ceil((failGate.remainingMs || 0) / 1000);
+                        await Swal.fire('Akses Dibatasi', `Terlalu banyak percobaan unduh gagal pada file ini. Coba lagi ${waitSec} detik lagi.`, 'warning');
+                        return false;
+                    }
                     await Swal.fire('Download Diblokir', 'File tidak valid atau sudah tidak tersedia.', 'error');
                     return false;
                 }
@@ -1530,22 +1556,34 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 const trustedSize = Number(knownFile.size || 0);
                 const trustedUrl = buildTrustedDriveUrl(knownFile.id);
                 if (!trustedName || !trustedUrl) {
+                    const failGate = registerFailedDownloadAttempt(fileId);
+                    if (failGate.blocked) {
+                        const waitSec = Math.ceil((failGate.remainingMs || 0) / 1000);
+                        await Swal.fire('Akses Dibatasi', `Terlalu banyak percobaan unduh gagal pada file ini. Coba lagi ${waitSec} detik lagi.`, 'warning');
+                        return false;
+                    }
                     await Swal.fire('Download Diblokir', 'Metadata file tidak valid.', 'error');
                     return false;
                 }
 
                 await trackDownload(knownFile.id, trustedName, trustedSize);
-                registerDownloadAttempt(fileId, true);
+                resetFailedDownloadAttempt(fileId);
                 const newWindow = window.open(trustedUrl, '_blank', 'noopener,noreferrer');
                 if (!newWindow) {
                     await Swal.fire('Popup Diblokir', 'Browser memblokir jendela unduh. Izinkan pop-up untuk situs ini.', 'warning');
                 }
                 return false;
             } catch (e) {
+                const failGate = registerFailedDownloadAttempt(fileId);
+                if (failGate.blocked) {
+                    const waitSec = Math.ceil((failGate.remainingMs || 0) / 1000);
+                    await Swal.fire('Akses Dibatasi', `Terlalu banyak percobaan unduh gagal pada file ini. Coba lagi ${waitSec} detik lagi.`, 'warning');
+                    return false;
+                }
                 await Swal.fire('Download Diblokir', e?.message || 'Validasi unduhan gagal.', 'error');
                 return false;
             } finally {
-                secureDownloadBusy = false;
+                clearPerFileLockByKey(lockKey);
             }
         }
 
