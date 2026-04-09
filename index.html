@@ -1259,10 +1259,13 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         async function trackDownload(fileName, fileSize) {
             const identifier = loggedInMember ? loggedInMember.username : anonGuestId;
             try {
-                await dbCtx.from('log_unduhan').insert([
-                    { id_pengguna: identifier, nama_file: fileName, ukuran_file: fileSize }
-                ]);
-            } catch(e) { console.error("Error Supabase:", e); }
+                const payload = {
+                    id_pengguna: identifier,
+                    nama_file: fileName,
+                    ukuran_file: Number(fileSize || 0)
+                };
+                await dbCtx.from('log_unduhan').insert([payload]);
+            } catch(e) { console.error("Error Supabase (trackDownload):", e); }
         }
 
         async function loadAdminData() {
@@ -1272,26 +1275,39 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             const loading = document.getElementById('adminLoadingIndicator');
             
             tbody.innerHTML = '';
+            if (emptyState) emptyState.classList.add('hidden');
             loading.classList.remove('hidden');
             loading.classList.add('flex');
 
             try {
-                const { data, error } = await dbCtx
+                let data = null;
+                let error = null;
+
+                let response = await dbCtx
                     .from('log_unduhan')
-                    .select('*')
+                    .select('id, id_pengguna, nama_file, ukuran_file, waktu, created_at')
                     .order('waktu', { ascending: false });
+
+                data = response.data;
+                error = response.error;
+
+                if (error && String(error.message || '').toLowerCase().includes('waktu')) {
+                    response = await dbCtx
+                        .from('log_unduhan')
+                        .select('id, id_pengguna, nama_file, ukuran_file, waktu, created_at')
+                        .order('created_at', { ascending: false });
+                    data = response.data;
+                    error = response.error;
+                }
                 
                 if (error) throw error;
                 
-                let history = [];
-                if(data) {
-                    history = data.map(d => ({
-                        time: d.waktu,
-                        user: d.id_pengguna,
-                        fileName: d.nama_file,
-                        size: d.ukuran_file
-                    }));
-                }
+                const history = (data || []).map(d => ({
+                    time: d.waktu || d.created_at || null,
+                    user: d.id_pengguna,
+                    fileName: d.nama_file,
+                    size: Number(d.ukuran_file || 0)
+                }));
 
                 const totalBadge = document.getElementById('totalDownloads');
                 if(totalBadge) {
@@ -1301,38 +1317,43 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 window.currentLogData = history;
 
                 if (history.length === 0) {
-                    if (emptyState) emptyState.classList.remove('hidden');
-                } else {
-                    if (emptyState) emptyState.classList.add('hidden');
-                    history.forEach(log => {
-                        const dateObj = new Date(log.time);
-                        const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-                        const formattedTime = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-                        
-                        const tr = document.createElement('tr');
-                        tr.className = 'hover:bg-gray-50';
-                        tr.innerHTML = `
-                            <td class="px-6 py-3 text-sm text-gray-500">
-                                <span class="font-medium text-gray-700">${formattedDate}</span><br>
-                                <span class="text-xs">${formattedTime} WIB</span>
-                            </td>
-                            <td class="px-6 py-3 text-sm">
-                                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono border border-gray-200 uppercase">
-                                    <i class="fas fa-user text-gray-400 mr-1"></i> ${escapeHtml(log.user)}
-                                </span>
-                            </td>
-                            <td class="px-6 py-3 text-sm font-medium text-brand-hover truncate max-w-[200px] md:max-w-md" title="${escapeHtml(log.fileName)}">
-                                ${escapeHtml(log.fileName)}
-                            </td>
-                            <td class="px-6 py-3 text-sm text-gray-500 text-right">
-                                ${formatBytes(log.size)}
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
+                    if (emptyState) {
+                        emptyState.classList.remove('hidden');
+                        emptyState.innerHTML = 'Belum ada log yang bisa ditampilkan. Jika log seharusnya ada, cek policy RLS SELECT untuk admin pada tabel <b>log_unduhan</b>.';
+                    }
+                    return;
                 }
+
+                history.forEach(log => {
+                    const dateObj = log.time ? new Date(log.time) : null;
+                    const validDate = dateObj && !Number.isNaN(dateObj.getTime());
+                    const formattedDate = validDate ? dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+                    const formattedTime = validDate ? dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+                    
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="px-6 py-3 text-sm text-gray-500">
+                            <span class="font-medium text-gray-700">${formattedDate}</span><br>
+                            <span class="text-xs">${formattedTime}${formattedTime !== '-' ? ' WIB' : ''}</span>
+                        </td>
+                        <td class="px-6 py-3 text-sm">
+                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono border border-gray-200 uppercase">
+                                <i class="fas fa-user text-gray-400 mr-1"></i> ${escapeHtml(log.user || '-')}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-sm font-medium text-brand-hover truncate max-w-[200px] md:max-w-md" title="${escapeHtml(log.fileName || '-')}">
+                            ${escapeHtml(log.fileName || '-')}
+                        </td>
+                        <td class="px-6 py-3 text-sm text-gray-500 text-right">
+                            ${formatBytes(log.size)}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             } catch(e) { 
                 console.error("Error Load Supabase (Log Unduhan):", e); 
+                Swal.fire('Error Log', e?.message || 'Log unduhan gagal dimuat.', 'error');
             }
             finally {
                 loading.classList.add('hidden');
