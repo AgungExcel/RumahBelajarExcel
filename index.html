@@ -589,8 +589,6 @@
         delete window.supabase;
         
         let isSupabaseActive = true;
-        const ADMIN_SESSION_MAX_AGE_MS = 15000;
-        let lastAdminVerifiedAt = 0;
 
 
         function sanitizeStoredMember(member) {
@@ -681,17 +679,13 @@
 
         async function checkPendingRegistrations() {
             if (!isSupabaseActive) return;
-            if (isAdminSession !== true) {
-                updateAdminNotification(0);
-                return;
-            }
             try {
                 const { count, error } = await dbCtx
                     .from('users_rbe')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'pending');
                 
-                if (!error) updateAdminNotification(count || 0);
+                if (!error) updateAdminNotification(count);
             } catch(e) { console.error(e); }
         }
 
@@ -699,16 +693,14 @@
             const adminBadge = document.getElementById('adminNotifBadge');
             const banner = document.getElementById('adminNotifBanner');
             const countText = document.getElementById('adminNotifCount');
-            const safeCount = Number(count || 0);
-            const shouldShow = isAdminSession === true && safeCount > 0;
             
-            if (shouldShow) {
+            if (count > 0) {
                 if(adminBadge) {
-                    adminBadge.innerText = safeCount;
+                    adminBadge.innerText = count;
                     adminBadge.classList.remove('hidden');
                 }
                 if(banner && countText) {
-                    countText.innerText = safeCount;
+                    countText.innerText = count;
                     banner.classList.remove('hidden');
                     banner.classList.add('flex');
                 }
@@ -745,9 +737,10 @@
             updateAuthUI();
             await refreshAdminSession();
             syncAdminControls();
-            dbCtx.auth.onAuthStateChange(async () => {
-                await refreshAdminSession();
-                syncAdminControls();
+            dbCtx.auth.onAuthStateChange(() => {
+                refreshAdminSession()
+                    .catch(err => console.error('auth state refresh error:', err))
+                    .finally(() => syncAdminControls());
             });
             checkPendingRegistrations();
             setInterval(checkPendingRegistrations, 15000); 
@@ -1054,41 +1047,17 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         let pendingAdminViewTab = 'members';
         let isAdminSession = false;
         let currentAdminUser = null;
-        const DOWNLOAD_LOG_COOLDOWN_MS = 15000;
-        const validDownloadRegistry = new Map();
-        const recentDownloadLocks = new Map();
+        let adminAuthBusy = false;
 
-        function normalizeCompare(value) {
-            return String(value || '').trim().toLowerCase();
-        }
-
-        function normalizeFileKey(fileId, fileName) {
-            return `${String(fileId || '').trim()}::${normalizeCompare(fileName)}`;
-        }
-
-        function registerDownloadableFiles(files) {
-            validDownloadRegistry.clear();
-            (files || []).forEach(file => {
-                if (!file || file.mimeType === 'application/vnd.google-apps.folder') return;
-                validDownloadRegistry.set(normalizeFileKey(file.id, file.name), {
-                    id: file.id,
-                    name: file.name,
-                    size: Number(file.size || 0),
-                    url: file.webContentLink || file.webViewLink || ''
-                });
-            });
-        }
-
-        function isKnownDownload(fileId, fileName, fileSize, url) {
-            const row = validDownloadRegistry.get(normalizeFileKey(fileId, fileName));
-            if (!row) return false;
-            if (Number(fileSize || 0) !== Number(row.size || 0)) return false;
-            if (String(url || '') !== String(row.url || '')) return false;
-            return true;
-        }
-
-        function canWriteDownloadLog() {
-            return Boolean(loggedInMember && loggedInMember.status === 'approved');
+        function setAdminLoginButtonLoading(isLoading = false) {
+            const loginBtn = document.querySelector('#adminAuthModal button[onclick="submitAdminLogin()"]');
+            if (!loginBtn) return;
+            loginBtn.disabled = isLoading;
+            loginBtn.classList.toggle('opacity-70', isLoading);
+            loginBtn.classList.toggle('cursor-wait', isLoading);
+            loginBtn.innerHTML = isLoading
+                ? '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...'
+                : '<i class="fas fa-unlock-alt mr-2"></i> Login ke Panel Admin';
         }
 
         async function refreshAdminSession() {
@@ -1100,76 +1069,47 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 if (!user) {
                     isAdminSession = false;
                     currentAdminUser = null;
-                    lastAdminVerifiedAt = 0;
                     syncAdminControls();
-                    updateAdminNotification(0);
                     return false;
                 }
 
                 const { data: adminRow, error: adminError } = await dbCtx
                     .from('admin_users')
-                    .select('user_id, email, role, is_active')
+                    .select('user_id, email, role')
                     .eq('user_id', user.id)
+                    .eq('email', user.email || '')
                     .maybeSingle();
 
-                const authEmail = normalizeCompare(user.email);
-                const adminEmail = normalizeCompare(adminRow?.email);
-                const isValidAdmin = !adminError
-                    && adminRow
-                    && adminRow.user_id === user.id
-                    && authEmail !== ''
-                    && adminEmail !== ''
-                    && authEmail === adminEmail
-                    && (adminRow.is_active === undefined || adminRow.is_active === null || adminRow.is_active === true);
-
-                if (!isValidAdmin) {
+                if (adminError) {
+                    console.error('admin_users check error:', adminError);
                     isAdminSession = false;
                     currentAdminUser = null;
-                    lastAdminVerifiedAt = 0;
                     syncAdminControls();
-                    updateAdminNotification(0);
                     return false;
                 }
 
-                currentAdminUser = {
-                    ...adminRow,
-                    auth_email: user.email || '',
-                    verified_at: new Date().toISOString()
-                };
+                if (!adminRow || String(adminRow.role || '').toLowerCase() !== 'admin') {
+                    isAdminSession = false;
+                    currentAdminUser = null;
+                    syncAdminControls();
+                    return false;
+                }
+
+                currentAdminUser = adminRow;
                 isAdminSession = true;
-                lastAdminVerifiedAt = Date.now();
                 syncAdminControls();
                 return true;
             } catch (err) {
                 console.error('refreshAdminSession error:', err);
                 isAdminSession = false;
                 currentAdminUser = null;
-                lastAdminVerifiedAt = 0;
                 syncAdminControls();
-                updateAdminNotification(0);
                 return false;
             }
         }
 
-        async function requireFreshAdminSession(showAlert = true) {
-            const isFresh = isAdminSession === true
-                && !!currentAdminUser
-                && (Date.now() - Number(lastAdminVerifiedAt || 0) <= ADMIN_SESSION_MAX_AGE_MS);
-
-            if (isFresh) return true;
-
-            const ok = await refreshAdminSession();
-            if (ok) return true;
-
-            if (showAlert) {
-                Swal.fire('Akses Ditolak', 'Sesi admin tidak valid atau sudah kedaluwarsa. Silakan login admin lagi.', 'error');
-            }
-            closeAdminAuthModal();
-            setAdminViewState(false);
-            return false;
-        }
-
         async function openAdminArea(tab = 'members') {
+            if (adminAuthBusy) return;
             pendingAdminViewTab = tab;
             const navBtnAdmin = document.getElementById('navBtnAdmin');
             if (navBtnAdmin) {
@@ -1179,12 +1119,15 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             try {
                 const ok = await refreshAdminSession();
                 if (!ok) {
-                    document.getElementById('adminEmailInput').value = '';
                     document.getElementById('adminPasswordInput').value = '';
                     document.getElementById('adminAuthModal').classList.remove('hidden');
                     return;
                 }
+                closeAdminAuthModal();
                 setAdminViewState(true, tab);
+            } catch (err) {
+                console.error('openAdminArea error:', err);
+                Swal.fire('Error', err?.message || 'Gagal membuka area admin.', 'error');
             } finally {
                 if (navBtnAdmin) {
                     navBtnAdmin.disabled = false;
@@ -1198,12 +1141,6 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             const mainView = document.getElementById('mainView');
             const adminView = document.getElementById('adminView');
             if (show) {
-                if (isAdminSession !== true || !currentAdminUser) {
-                    adminView.classList.add('hidden');
-                    mainView.classList.remove('hidden');
-                    syncAdminControls();
-                    return;
-                }
                 mainView.classList.add('hidden');
                 adminView.classList.remove('hidden');
                 syncAdminControls();
@@ -1229,15 +1166,22 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
 
         function closeAdminAuthModal() {
             document.getElementById('adminAuthModal').classList.add('hidden');
+            setAdminLoginButtonLoading(false);
+            adminAuthBusy = false;
         }
 
         async function submitAdminLogin() {
-            const email = document.getElementById('adminEmailInput').value.trim();
+            if (adminAuthBusy) return;
+            adminAuthBusy = true;
+            const email = document.getElementById('adminEmailInput').value.trim().toLowerCase();
             const password = document.getElementById('adminPasswordInput').value;
 
             if (!email || !password) {
+                adminAuthBusy = false;
                 return Swal.fire('Peringatan', 'Email dan password admin wajib diisi.', 'warning');
             }
+
+            setAdminLoginButtonLoading(true);
 
             try {
                 const { error: signInError } = await dbCtx.auth.signInWithPassword({ email, password });
@@ -1245,14 +1189,14 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
 
                 const ok = await refreshAdminSession();
                 if (!ok) {
-                    await dbCtx.auth.signOut();
-                    throw new Error('Akun ini berhasil login ke Auth, tetapi belum terdaftar di tabel admin_users.');
+                    await dbCtx.auth.signOut({ scope: 'local' });
+                    throw new Error('Login berhasil ke Auth, tetapi akun ini bukan admin aktif.');
                 }
 
                 closeAdminAuthModal();
                 setAdminViewState(true, pendingAdminViewTab);
 
-                Swal.fire({
+                await Swal.fire({
                     icon: 'success',
                     title: 'Login Admin Berhasil',
                     text: `Selamat datang, ${currentAdminUser?.email || email}`,
@@ -1263,8 +1207,11 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 console.error('Admin login error:', e);
                 isAdminSession = false;
                 currentAdminUser = null;
-                lastAdminVerifiedAt = 0;
-                Swal.fire('Login Admin Gagal', e.message || 'Email atau password admin salah.', 'error');
+                syncAdminControls();
+                await Swal.fire('Login Admin Gagal', e?.message || 'Email atau password admin salah.', 'error');
+            } finally {
+                setAdminLoginButtonLoading(false);
+                adminAuthBusy = false;
             }
         }
 
@@ -1287,7 +1234,6 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             }
             isAdminSession = false;
             currentAdminUser = null;
-            lastAdminVerifiedAt = 0;
             closeAdminAuthModal();
             setAdminViewState(false);
             await refreshAdminSession();
@@ -1295,8 +1241,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         }
 
         function ensureAdminSession() {
-            const freshEnough = Date.now() - Number(lastAdminVerifiedAt || 0) <= ADMIN_SESSION_MAX_AGE_MS;
-            if (isAdminSession !== true || !currentAdminUser || !freshEnough) {
+            if (isAdminSession !== true || !currentAdminUser) {
                 Swal.fire('Akses Ditolak', 'Sesi admin tidak valid. Silakan login admin lagi.', 'error');
                 setAdminViewState(false);
                 return false;
@@ -1327,7 +1272,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         }
 
         async function loadAdminMembers() {
-            if (!(await requireFreshAdminSession())) return;
+            if (!ensureAdminSession()) return;
             const tbody = document.getElementById('memberTableBody');
             const emptyState = document.getElementById('memberEmptyState');
             const loading = document.getElementById('memberLoadingIndicator');
@@ -1393,7 +1338,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         }
 
         async function updateMemberStatus(id, newStatus) {
-            if (!(await requireFreshAdminSession())) return;
+            if (!ensureAdminSession()) return;
             const actionStr = newStatus === 'approved' ? 'MENYETUJUI' : 'MENOLAK';
             const result = await Swal.fire({
                 title: 'Konfirmasi',
@@ -1483,83 +1428,20 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
             XLSX.writeFile(workbook, "Daftar_Member_RBE.xlsx");
         }
 
-        async function trackDownload(fileId, fileName, fileSize, url) {
-            if (!canWriteDownloadLog()) return false;
-            if (!isKnownDownload(fileId, fileName, fileSize, url)) {
-                console.warn('Blocked suspicious download log attempt:', { fileId, fileName, fileSize, url });
-                return false;
-            }
-
-            const identifier = String(loggedInMember?.username || '').trim();
-            if (!identifier) return false;
-
-            const logKey = `${normalizeFileKey(fileId, fileName)}::${identifier}`;
-            const now = Date.now();
-            const recentAt = recentDownloadLocks.get(logKey) || 0;
-            if (now - recentAt < DOWNLOAD_LOG_COOLDOWN_MS) {
-                return false;
-            }
-            recentDownloadLocks.set(logKey, now);
-
+        async function trackDownload(fileName, fileSize) {
+            const identifier = loggedInMember ? loggedInMember.username : anonGuestId;
             try {
-                const { error } = await dbCtx.rpc('tulis_log_unduhan', {
-                    p_file_id: String(fileId || '').trim(),
-                    p_nama_file: String(fileName || '').trim(),
-                    p_ukuran_file: String(Number(fileSize || 0))
-                });
-                if (error) throw error;
-                return true;
-            } catch(e) {
-                recentDownloadLocks.delete(logKey);
-                console.error("Error Supabase RPC (trackDownload):", e);
-                return false;
-            }
-        }
-
-        async function secureDownloadFile(fileId, fileName, fileSize, url) {
-            if (!canWriteDownloadLog()) {
-                openAuthModal();
-                return;
-            }
-
-            if (!isKnownDownload(fileId, fileName, fileSize, url)) {
-                Swal.fire('Download Diblokir', 'File tidak lolos verifikasi sistem. Silakan refresh daftar file lalu coba lagi.', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(url, { method: 'GET' });
-                if (!response.ok) {
-                    throw new Error(`Gagal mengunduh file (${response.status})`);
-                }
-
-                const blob = await response.blob();
-                if (!(blob.size > 0)) {
-                    throw new Error('File yang diterima kosong atau tidak valid.');
-                }
-                if (Number(fileSize || 0) > 0 && Number(blob.size || 0) !== Number(fileSize || 0)) {
-                    throw new Error('Ukuran file hasil unduhan tidak cocok dengan data server.');
-                }
-
-                const objectUrl = URL.createObjectURL(blob);
-                const tempLink = document.createElement('a');
-                tempLink.href = objectUrl;
-                tempLink.download = fileName || 'download';
-                tempLink.rel = 'noopener';
-                document.body.appendChild(tempLink);
-                tempLink.click();
-                tempLink.remove();
-                setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
-
-                await trackDownload(fileId, fileName, fileSize, url);
-            } catch (e) {
-                console.error('secureDownloadFile error:', e);
-                Swal.fire('Download Gagal', e?.message || 'File gagal diverifikasi untuk diunduh.', 'error');
-            }
+                const payload = {
+                    id_pengguna: identifier,
+                    nama_file: fileName,
+                    ukuran_file: Number(fileSize || 0)
+                };
+                await dbCtx.from('log_unduhan').insert([payload]);
+            } catch(e) { console.error("Error Supabase (trackDownload):", e); }
         }
 
         async function loadAdminData() {
-            if (!(await requireFreshAdminSession())) return;
+            if (!ensureAdminSession()) return;
             const tbody = document.getElementById('adminTableBody');
             const emptyState = document.getElementById('adminEmptyState');
             const loading = document.getElementById('adminLoadingIndicator');
@@ -1597,9 +1479,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                     user: d.id_pengguna,
                     fileName: d.nama_file,
                     size: Number(d.ukuran_file || 0)
-                })).filter(log => {
-                    return String(log.user || '').trim() !== '' && String(log.fileName || '').trim() !== '' && Number(log.size || 0) > 0;
-                });
+                }));
 
                 const totalBadge = document.getElementById('totalDownloads');
                 if(totalBadge) {
@@ -1654,7 +1534,7 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
         }
 
         async function clearAdminData() {
-            if (!(await requireFreshAdminSession())) return;
+            if (!ensureAdminSession()) return;
             const result = await Swal.fire({
                 title: 'Reset Log Unduhan?',
                 text: "PERINGATAN! Anda yakin ingin menghapus seluruh log unduhan? Data tidak dapat dikembalikan.",
@@ -2051,7 +1931,6 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                 }
 
                 updateSummary(files);
-                registerDownloadableFiles(files);
 
                 files.sort((a, b) => {
                     const aFolder = a.mimeType === 'application/vnd.google-apps.folder';
@@ -2106,9 +1985,9 @@ Mohon segera masuk ke Panel Admin untuk menyetujui pendaftaran ini.`;
                                     <button onclick="shareFile('${downloadLink}', '${safeFileName}')" class="inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1.5 px-3 rounded-md shadow-sm transition duration-200 text-sm" title="Bagikan File">
                                         <i class="fas fa-share-nodes"></i>
                                     </button>
-                                    <button onclick="secureDownloadFile('${file.id}', '${safeFileName}', ${file.size || 0}, '${downloadLink}')" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
+                                    <a href="${downloadLink}" target="_blank" onclick="trackDownload('${safeFileName}', ${file.size || 0})" class="inline-flex items-center justify-center bg-brand-main hover:bg-brand-hover text-white font-medium py-1.5 px-4 rounded-md shadow-sm transition duration-200 text-sm">
                                         <i class="fas fa-download mr-2 text-xs"></i> Unduh File
-                                    </button>
+                                    </a>
                                 </div>
                             `;
                         }
